@@ -179,46 +179,35 @@ const WorkspaceLayout = () => {
         'Export_Panel',
         'EXPORTPANEL',
         'EXPORT_PANEL',
-        'EXPORT-PANEL'
+        'EXPORT-PANEL',
+        'enhancedbannerservice',
+        'enhanced-banner-service',
+        'enhanced_banner_service',
+        'EnhancedBannerService',
+        'Enhanced-Banner-Service',
+        'Enhanced_Banner_Service',
+        'ENHANCEDBANNERSERVICE',
+        'ENHANCED_BANNER_SERVICE',
+        'ENHANCED-BANNER-SERVICE'
       ]
       
       console.log('🔍 Starting file filtering process...')
       console.log('📁 Total files to process:', Object.keys(files).length)
       console.log('📋 All files:', Object.keys(files))
       
-      // Whitelist approach - only allow essential files
-      const allowedExtensions = ['.js', '.jsx', '.ts', '.tsx', '.json', '.html', '.css', '.scss', '.md', '.txt']
-      const allowedFiles = ['package.json', 'index.html', 'main.js', 'main.jsx', 'App.js', 'App.jsx', 'index.js', 'index.jsx']
-      
       for (const [path, file] of Object.entries(files)) {
         console.log('🔍 Processing file:', path)
         
-        // Skip ANY file that contains problematic patterns (case insensitive)
+        // Skip ONLY the specific problematic files that cause EIO errors
         const lowerPath = path.toLowerCase()
         if (problematicPatterns.some(pattern => lowerPath.includes(pattern.toLowerCase()))) {
           console.log('🚫 SKIPPING problematic file:', path, '(matched pattern)')
           continue
         }
         
-        // Only allow files with safe extensions or known safe files
-        const hasAllowedExtension = allowedExtensions.some(ext => path.toLowerCase().endsWith(ext))
-        const isAllowedFile = allowedFiles.some(allowed => path.toLowerCase().includes(allowed.toLowerCase()))
-        
-        if (!hasAllowedExtension && !isAllowedFile) {
-          console.log('🚫 SKIPPING file with unsafe extension:', path)
-          continue
-        }
-        
-        // Additional checks for problematic file patterns
-        if (lowerPath.includes('choice') || lowerPath.includes('export') || 
-            lowerPath.includes('panel') || lowerPath.includes('selector')) {
-          console.log('🚫 SKIPPING file with problematic pattern:', path)
-          continue
-        }
-        
-        // Skip files with complex nested paths that might cause issues
-        if (path.split('/').length > 4) {
-          console.log('🚫 SKIPPING file with deep nesting:', path)
+        // Skip files with complex nested paths that might cause issues (but be less restrictive)
+        if (path.split('/').length > 6) {
+          console.log('🚫 SKIPPING file with very deep nesting:', path)
           continue
         }
         
@@ -267,14 +256,13 @@ const WorkspaceLayout = () => {
       console.log('✅ Filtered files for WebContainer:', Object.keys(webcontainerFiles).length, 'out of', Object.keys(files).length)
       console.log('📁 Files being mounted:', Object.keys(webcontainerFiles))
       
-      // FINAL SAFETY CHECK - Remove any remaining problematic files
+      // FINAL SAFETY CHECK - Remove only the specific problematic files
       const finalWebcontainerFiles = {}
       for (const [path, fileData] of Object.entries(webcontainerFiles)) {
         const lowerPath = path.toLowerCase()
-        if (lowerPath.includes('choice') || lowerPath.includes('choiceselector') ||
-            lowerPath.includes('export') || lowerPath.includes('panel') ||
-            lowerPath.includes('selector') || lowerPath.includes('exportpanel')) {
-          console.log('🚫 FINAL CHECK: Removing problematic file:', path)
+        if (lowerPath.includes('choiceselector') || lowerPath.includes('exportpanel') || 
+            lowerPath.includes('enhancedbannerservice')) {
+          console.log('🚫 FINAL CHECK: Removing specific problematic file:', path)
           continue
         }
         finalWebcontainerFiles[path] = fileData
