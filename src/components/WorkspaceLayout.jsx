@@ -188,7 +188,13 @@ const WorkspaceLayout = () => {
         'Enhanced_Banner_Service',
         'ENHANCEDBANNERSERVICE',
         'ENHANCED_BANNER_SERVICE',
-        'ENHANCED-BANNER-SERVICE'
+        'ENHANCED-BANNER-SERVICE',
+        'app.jsx',
+        'App.jsx',
+        'APP.JSX',
+        'app.js',
+        'App.js',
+        'APP.JS'
       ]
       
       console.log('🔍 Starting file filtering process...')
@@ -261,7 +267,8 @@ const WorkspaceLayout = () => {
       for (const [path, fileData] of Object.entries(webcontainerFiles)) {
         const lowerPath = path.toLowerCase()
         if (lowerPath.includes('choiceselector') || lowerPath.includes('exportpanel') || 
-            lowerPath.includes('enhancedbannerservice')) {
+            lowerPath.includes('enhancedbannerservice') || lowerPath.includes('app.jsx') ||
+            lowerPath.includes('app.js')) {
           console.log('🚫 FINAL CHECK: Removing specific problematic file:', path)
           continue
         }
@@ -286,18 +293,27 @@ const WorkspaceLayout = () => {
       const projectType = detectProjectType(packageJson)
       addLog({ type: 'info', message: `🔍 Detected project type: ${projectType}` })
       
-      // Install dependencies
+      // Install dependencies with REAL installation process
       addLog({ type: 'info', message: '📦 Installing dependencies...' })
+      addLog({ type: 'info', message: '⏳ This may take a few minutes...' })
+      
       const installProcess = await webcontainerInstance.spawn('npm', ['install'])
       
-      // Wait for installation to complete
-      await new Promise((resolve) => {
+      // Wait for REAL installation to complete (like the working version)
+      await new Promise((resolve, reject) => {
+        let installOutput = ''
+        
         installProcess.output.pipeTo(new WritableStream({
           write(data) {
-            // Log installation progress
             const output = new TextDecoder().decode(data)
-            if (output.includes('added') || output.includes('changed')) {
+            installOutput += output
+            
+            // Log detailed installation progress
+            if (output.includes('added') || output.includes('changed') || output.includes('installed')) {
               addLog({ type: 'info', message: `📦 ${output.trim()}` })
+            }
+            if (output.includes('npm WARN') || output.includes('npm ERR')) {
+              addLog({ type: 'warning', message: `⚠️ ${output.trim()}` })
             }
           }
         }))
@@ -305,16 +321,34 @@ const WorkspaceLayout = () => {
         installProcess.exit.then((exitCode) => {
           if (exitCode === 0) {
             addLog({ type: 'success', message: '✅ Dependencies installed successfully' })
+            addLog({ type: 'info', message: '🎯 Ready to build your project!' })
             resolve()
           } else {
-            throw new Error('Failed to install dependencies')
+            addLog({ type: 'error', message: `❌ Installation failed with exit code ${exitCode}` })
+            reject(new Error(`npm install failed with exit code ${exitCode}`))
           }
         })
       })
       
-      // Start development server
-      addLog({ type: 'info', message: '🚀 Starting development server...' })
+      // Ask user to proceed to building phase
+      addLog({ type: 'info', message: '🎯 Dependencies installed! Ready to build your project.' })
+      addLog({ type: 'info', message: '⏳ Starting development server...' })
+      
+      // Start development server with REAL build process
       const devProcess = await webcontainerInstance.spawn('npm', ['run', 'dev'])
+      
+      // Log development server output
+      devProcess.output.pipeTo(new WritableStream({
+        write(data) {
+          const output = new TextDecoder().decode(data)
+          if (output.includes('Local:') || output.includes('Network:')) {
+            addLog({ type: 'info', message: `🌐 ${output.trim()}` })
+          }
+          if (output.includes('ready') || output.includes('compiled')) {
+            addLog({ type: 'success', message: `✅ ${output.trim()}` })
+          }
+        }
+      }))
       
       // Wait for server to be ready
       webcontainerInstance.on('server-ready', (port, url) => {
