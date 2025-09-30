@@ -150,8 +150,10 @@ const WorkspaceLayout = () => {
       const { WebContainer } = await import('@webcontainer/api')
       
       // Boot WebContainer
+      addLog({ type: 'info', message: '🔄 Booting WebContainer...' })
       const webcontainerInstance = await WebContainer.boot()
       addLog({ type: 'success', message: '✅ WebContainer booted successfully' })
+      addLog({ type: 'info', message: '🌐 WebContainer is ready for file mounting...' })
       
       // Validate and prepare files for WebContainer
       if (!files || typeof files !== 'object' || Object.keys(files).length === 0) {
@@ -200,6 +202,10 @@ const WorkspaceLayout = () => {
       console.log('🔍 Starting file filtering process...')
       console.log('📁 Total files to process:', Object.keys(files).length)
       console.log('📋 All files:', Object.keys(files))
+      
+      // Add a log to show we're starting the real process
+      addLog({ type: 'info', message: '🚀 Starting WebContainer preview process...' })
+      addLog({ type: 'info', message: `📁 Processing ${Object.keys(files).length} files from your upload...` })
       
       for (const [path, file] of Object.entries(files)) {
         console.log('🔍 Processing file:', path)
