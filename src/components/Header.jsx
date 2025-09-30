@@ -40,7 +40,7 @@ const Header = () => {
     
     // Check browser compatibility
     const hasRequiredAPIs = typeof WebContainer !== 'undefined' || 
-                           (typeof import !== 'undefined')
+                           (typeof window !== 'undefined' && window.fetch)
     addLog({ type: hasRequiredAPIs ? 'success' : 'warning', 
       message: `Browser APIs: ${hasRequiredAPIs ? '✅ Compatible' : '⚠️ Limited'}` })
     
