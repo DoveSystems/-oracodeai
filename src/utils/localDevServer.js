@@ -68,6 +68,7 @@ export async function startLocalDevServer(files) {
         
         console.log('Preview URL created:', previewInfo.url)
         console.log('Preview type:', previewInfo.type)
+        console.log('Preview URL starts with:', previewInfo.url.substring(0, 50))
         
         addLog({ type: 'success', message: `✅ Preview ready at ${previewInfo.url.substring(0, 50)}...` })
         addLog({ type: 'info', message: '🎉 Your project is now live! You can edit files and see changes in real-time.' })
@@ -168,23 +169,39 @@ async function createWorkingPreview(files, entryPoint) {
   // Create a proper HTML document that works in new tabs
   const htmlContent = createWorkingHTML(files, entryPoint)
   
-  // Use data URL approach that actually works
-  const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`
+  // Create a blob URL that actually works in iframes
+  const blob = new Blob([htmlContent], { type: 'text/html' })
+  const blobUrl = URL.createObjectURL(blob)
   
-  return { url: dataUrl, type: 'data-url' }
+  // Store the blob URL for cleanup later
+  if (window.previewBlobUrls) {
+    window.previewBlobUrls.push(blobUrl)
+  } else {
+    window.previewBlobUrls = [blobUrl]
+  }
+  
+  return { url: blobUrl, type: 'blob-url' }
 }
 
 function createWorkingHTML(files, entryPoint) {
+  console.log('Creating HTML for files:', Object.keys(files))
+  console.log('Entry point:', entryPoint)
+  
   // Find the main HTML file
   const htmlFiles = Object.keys(files).filter(file => file.endsWith('.html'))
   const mainHtml = htmlFiles.find(file => file === 'index.html') || htmlFiles[0]
   
+  console.log('HTML files found:', htmlFiles)
+  console.log('Main HTML file:', mainHtml)
+  
   if (mainHtml && files[mainHtml]) {
+    console.log('Using existing HTML file:', mainHtml)
     // If we have an HTML file, use it as the base
     let htmlContent = files[mainHtml].content
     
     // Inject any CSS files
     const cssFiles = Object.keys(files).filter(file => file.endsWith('.css'))
+    console.log('CSS files to inject:', cssFiles)
     cssFiles.forEach(cssFile => {
       const cssContent = files[cssFile].content
       htmlContent = htmlContent.replace('</head>', `<style>${cssContent}</style></head>`)
@@ -192,19 +209,23 @@ function createWorkingHTML(files, entryPoint) {
     
     // Inject any JS files
     const jsFiles = Object.keys(files).filter(file => file.endsWith('.js'))
+    console.log('JS files to inject:', jsFiles)
     jsFiles.forEach(jsFile => {
       const jsContent = files[jsFile].content
       htmlContent = htmlContent.replace('</body>', `<script>${jsContent}</script></body>`)
     })
     
+    console.log('Final HTML content length:', htmlContent.length)
     return htmlContent
   }
   
   // If no HTML file, create a simple project viewer
   if (Object.keys(files).length === 0) {
+    console.log('No files, creating test HTML')
     return createTestHTML()
   }
   
+  console.log('Creating project viewer')
   // Create a simple project overview
   return createSimpleProjectViewer(files, entryPoint)
 }

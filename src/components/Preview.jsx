@@ -18,27 +18,8 @@ const Preview = () => {
 
   const handleOpenExternal = () => {
     if (previewUrl) {
-      // For data URLs, create a new window and write the content directly
-      if (previewUrl.startsWith('data:')) {
-        try {
-          // Extract the content from data URL
-          const base64Content = previewUrl.split(',')[1]
-          const htmlContent = decodeURIComponent(base64Content)
-          
-          // Create a new window and write the content
-          const newWindow = window.open('', '_blank')
-          if (newWindow) {
-            newWindow.document.write(htmlContent)
-            newWindow.document.close()
-          }
-        } catch (error) {
-          console.error('Failed to open preview in new tab:', error)
-          // Fallback: try opening the data URL directly
-          window.open(previewUrl, '_blank')
-        }
-      } else {
-        window.open(previewUrl, '_blank')
-      }
+      // Simple approach - just open the URL directly
+      window.open(previewUrl, '_blank')
     }
   }
 
