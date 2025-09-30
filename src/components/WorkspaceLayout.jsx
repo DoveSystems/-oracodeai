@@ -55,11 +55,15 @@ const WorkspaceLayout = () => {
           if (file && file.content) {
             // Sanitize file path to prevent EIO errors
             const sanitizedPath = path
-              .replace(/[<>:"|?*]/g, '_') // Replace invalid characters
+              .replace(/[<>:"|?*\x00-\x1f\x7f-\x9f]/g, '_') // Replace invalid characters including control chars
               .replace(/\\/g, '/') // Normalize path separators
               .replace(/\/+/g, '/') // Remove duplicate slashes
               .replace(/^\/+/, '') // Remove leading slashes
               .replace(/\/+$/, '') // Remove trailing slashes
+              .replace(/[^\w\s\-_\.\/]/g, '_') // Replace any remaining non-alphanumeric chars except safe ones
+              .replace(/\s+/g, '_') // Replace spaces with underscores
+              .replace(/_+/g, '_') // Remove duplicate underscores
+              .replace(/^_+|_+$/g, '') // Remove leading/trailing underscores
             
             // Skip empty or invalid paths
             if (sanitizedPath && sanitizedPath.length > 0) {
@@ -67,6 +71,16 @@ const WorkspaceLayout = () => {
                 file: {
                   contents: file.content
                 }
+              }
+              
+              // Special debugging for the problematic file
+              if (path.includes('choiceselector')) {
+                console.log(`🔍 Debugging choiceselector file:`)
+                console.log(`  Original path: "${path}"`)
+                console.log(`  Sanitized path: "${sanitizedPath}"`)
+                console.log(`  Path length: ${path.length}`)
+                console.log(`  Sanitized length: ${sanitizedPath.length}`)
+                console.log(`  Path bytes:`, Array.from(path).map(c => c.charCodeAt(0)))
               }
             } else {
               console.warn(`Skipping invalid file path: ${path}`)
