@@ -163,22 +163,9 @@ const WorkspaceLayout = () => {
       // Convert files to WebContainer format with ULTRA aggressive filtering
       const webcontainerFiles = {}
       
-      // WHITELIST APPROACH - Only allow essential files that are known to work
-      const safeFiles = [
-        'package.json',
-        'index.html',
-        'src/main.js',
-        'src/main.jsx',
-        'src/index.js',
-        'src/index.jsx',
-        'src/App.js',
-        'src/App.jsx',
-        'vite.config.js',
-        'tailwind.config.js',
-        'postcss.config.js',
-        '.env',
-        'README.md'
-      ]
+      // SMART FILTERING - Allow most files but filter out only problematic ones
+      const essentialExtensions = ['.js', '.jsx', '.ts', '.tsx', '.json', '.html', '.css', '.scss', '.md', '.txt', '.env']
+      const essentialFiles = ['package.json', 'index.html', 'vite.config.js', 'tailwind.config.js', 'postcss.config.js']
       
       const problematicPatterns = [
         'choiceselector',
@@ -238,17 +225,22 @@ const WorkspaceLayout = () => {
       const fileList = Object.keys(files).slice(0, 10).join(', ')
       addLog({ type: 'info', message: `📋 Sample files: ${fileList}${Object.keys(files).length > 10 ? '...' : ''}` })
       
+      // Count different types of files
+      const jsFiles = Object.keys(files).filter(f => f.endsWith('.js') || f.endsWith('.jsx'))
+      const cssFiles = Object.keys(files).filter(f => f.endsWith('.css') || f.endsWith('.scss'))
+      const jsonFiles = Object.keys(files).filter(f => f.endsWith('.json'))
+      
+      addLog({ type: 'info', message: `📊 Found: ${jsFiles.length} JS files, ${cssFiles.length} CSS files, ${jsonFiles.length} JSON files` })
+      
       for (const [path, file] of Object.entries(files)) {
         console.log('🔍 Processing file:', path)
         
-        // WHITELIST APPROACH - Only allow safe files
-        const isSafeFile = safeFiles.some(safeFile => 
-          path.toLowerCase() === safeFile.toLowerCase() || 
-          path.toLowerCase().includes(safeFile.toLowerCase())
-        )
+        // SMART FILTERING - Allow files with safe extensions or essential files
+        const hasSafeExtension = essentialExtensions.some(ext => path.toLowerCase().endsWith(ext))
+        const isEssentialFile = essentialFiles.some(essential => path.toLowerCase().includes(essential.toLowerCase()))
         
-        if (!isSafeFile) {
-          console.log('🚫 SKIPPING non-whitelisted file:', path)
+        if (!hasSafeExtension && !isEssentialFile) {
+          console.log('🚫 SKIPPING file with unsafe extension:', path)
           continue
         }
         
@@ -259,9 +251,15 @@ const WorkspaceLayout = () => {
           continue
         }
         
-        // Skip files with complex nested paths that might cause issues (but be less restrictive)
-        if (path.split('/').length > 6) {
+        // Skip files with very complex nested paths that might cause issues (but be more permissive)
+        if (path.split('/').length > 8) {
           console.log('🚫 SKIPPING file with very deep nesting:', path)
+          continue
+        }
+        
+        // Skip files in node_modules or build directories (they're not needed for source)
+        if (path.includes('node_modules') || path.includes('dist') || path.includes('build')) {
+          console.log('🚫 SKIPPING build/dependency file:', path)
           continue
         }
         
