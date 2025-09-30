@@ -196,7 +196,16 @@ const WorkspaceLayout = () => {
         'APP.JSX',
         'app.js',
         'App.js',
-        'APP.JS'
+        'APP.JS',
+        'storymode',
+        'story-mode',
+        'story_mode',
+        'StoryMode',
+        'Story-Mode',
+        'Story_Mode',
+        'STORYMODE',
+        'STORY_MODE',
+        'STORY-MODE'
       ]
       
       console.log('🔍 Starting file filtering process...')
@@ -274,7 +283,7 @@ const WorkspaceLayout = () => {
         const lowerPath = path.toLowerCase()
         if (lowerPath.includes('choiceselector') || lowerPath.includes('exportpanel') || 
             lowerPath.includes('enhancedbannerservice') || lowerPath.includes('app.jsx') ||
-            lowerPath.includes('app.js')) {
+            lowerPath.includes('app.js') || lowerPath.includes('storymode')) {
           console.log('🚫 FINAL CHECK: Removing specific problematic file:', path)
           continue
         }
