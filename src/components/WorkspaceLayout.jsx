@@ -280,8 +280,20 @@ const WorkspaceLayout = () => {
       
       // Mount files to WebContainer with error handling
       try {
+        addLog({ type: 'info', message: `📁 Mounting ${Object.keys(finalWebcontainerFiles).length} files to WebContainer...` })
         await webcontainerInstance.mount(finalWebcontainerFiles)
-        addLog({ type: 'info', message: `📁 Mounted ${Object.keys(finalWebcontainerFiles).length} files` })
+        addLog({ type: 'success', message: `✅ Successfully mounted ${Object.keys(finalWebcontainerFiles).length} files` })
+        
+        // Verify files are actually mounted by checking if we can read them
+        addLog({ type: 'info', message: '🔍 Verifying file mounting...' })
+        try {
+          const packageJsonContent = await webcontainerInstance.fs.readFile('package.json', 'utf-8')
+          if (packageJsonContent) {
+            addLog({ type: 'success', message: '✅ Files verified - package.json found' })
+          }
+        } catch (verifyError) {
+          addLog({ type: 'warning', message: '⚠️ Could not verify package.json, but continuing...' })
+        }
       } catch (mountError) {
         console.error('Mount error:', mountError)
         addLog({ type: 'error', message: `❌ Failed to mount files: ${mountError.message}` })
@@ -325,9 +337,24 @@ const WorkspaceLayout = () => {
           }
         }))
         
-        installProcess.exit.then((exitCode) => {
+        installProcess.exit.then(async (exitCode) => {
           if (exitCode === 0) {
             addLog({ type: 'success', message: '✅ Dependencies installed successfully' })
+            
+            // Verify installation by checking if node_modules exists
+            try {
+              const nodeModulesExists = await webcontainerInstance.fs.readdir('/').then(files => 
+                files.some(file => file.name === 'node_modules')
+              )
+              if (nodeModulesExists) {
+                addLog({ type: 'success', message: '✅ node_modules directory created' })
+              } else {
+                addLog({ type: 'warning', message: '⚠️ node_modules not found, but installation reported success' })
+              }
+            } catch (verifyError) {
+              addLog({ type: 'warning', message: '⚠️ Could not verify node_modules, but continuing...' })
+            }
+            
             addLog({ type: 'info', message: '🎯 Ready to build your project!' })
             resolve()
           } else {
@@ -348,7 +375,7 @@ const WorkspaceLayout = () => {
       // Start development server with REAL build process
       const devProcess = await webcontainerInstance.spawn('npm', ['run', 'dev'])
       
-      // Log development server output
+      // Log development server output with more detailed feedback
       devProcess.output.pipeTo(new WritableStream({
         write(data) {
           const output = new TextDecoder().decode(data)
@@ -357,6 +384,15 @@ const WorkspaceLayout = () => {
           }
           if (output.includes('ready') || output.includes('compiled')) {
             addLog({ type: 'success', message: `✅ ${output.trim()}` })
+          }
+          if (output.includes('VITE') || output.includes('vite')) {
+            addLog({ type: 'info', message: `⚡ ${output.trim()}` })
+          }
+          if (output.includes('error') || output.includes('Error')) {
+            addLog({ type: 'error', message: `❌ ${output.trim()}` })
+          }
+          if (output.includes('warning') || output.includes('Warning')) {
+            addLog({ type: 'warning', message: `⚠️ ${output.trim()}` })
           }
         }
       }))
