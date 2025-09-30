@@ -141,26 +141,75 @@ const WorkspaceLayout = () => {
     }
   }
 
-  // NEW: Create REAL working preview that shows the actual application
+  // NEW: Create REAL working preview using WebContainer like the working version
   const createLivePreview = async (files) => {
-    // Check if this is a React/Vue/Angular project
-    const isReactProject = files['package.json'] && files['package.json'].content.includes('react')
-    const isVueProject = files['package.json'] && files['package.json'].content.includes('vue')
-    const isAngularProject = files['package.json'] && files['package.json'].content.includes('angular')
-    
-    if (isReactProject || isVueProject || isAngularProject) {
-      // For framework projects, create a proper development environment
-      return createFrameworkPreview(files, isReactProject ? 'react' : isVueProject ? 'vue' : 'angular')
-    }
-    
-    // For static HTML projects, create a working preview
-    const htmlFiles = Object.keys(files).filter(file => file.endsWith('.html'))
-    const mainHtml = htmlFiles.find(file => file === 'index.html') || htmlFiles[0]
-    
-    if (mainHtml && files[mainHtml]) {
-      return createHTMLPreview(files, mainHtml)
-    } else {
-      return createProjectOverview(files)
+    try {
+      addLog({ type: 'info', message: '🚀 Booting WebContainer...' })
+      
+      // Import WebContainer dynamically
+      const { WebContainer } = await import('@webcontainer/api')
+      
+      // Boot WebContainer
+      const webcontainerInstance = await WebContainer.boot()
+      addLog({ type: 'success', message: '✅ WebContainer booted successfully' })
+      
+      // Mount files to WebContainer
+      await webcontainerInstance.mount(files)
+      addLog({ type: 'info', message: `📁 Mounted ${Object.keys(files).length} files` })
+      
+      // Detect project type
+      const packageJson = files['package.json'] ? JSON.parse(files['package.json'].content) : {}
+      const projectType = detectProjectType(packageJson)
+      addLog({ type: 'info', message: `🔍 Detected project type: ${projectType}` })
+      
+      // Install dependencies
+      addLog({ type: 'info', message: '📦 Installing dependencies...' })
+      const installProcess = await webcontainerInstance.spawn('npm', ['install'])
+      
+      // Wait for installation to complete
+      await new Promise((resolve) => {
+        installProcess.output.pipeTo(new WritableStream({
+          write(data) {
+            // Log installation progress
+            const output = new TextDecoder().decode(data)
+            if (output.includes('added') || output.includes('changed')) {
+              addLog({ type: 'info', message: `📦 ${output.trim()}` })
+            }
+          }
+        }))
+        
+        installProcess.exit.then((exitCode) => {
+          if (exitCode === 0) {
+            addLog({ type: 'success', message: '✅ Dependencies installed successfully' })
+            resolve()
+          } else {
+            throw new Error('Failed to install dependencies')
+          }
+        })
+      })
+      
+      // Start development server
+      addLog({ type: 'info', message: '🚀 Starting development server...' })
+      const devProcess = await webcontainerInstance.spawn('npm', ['run', 'dev'])
+      
+      // Wait for server to be ready
+      webcontainerInstance.on('server-ready', (port, url) => {
+        addLog({ type: 'success', message: `🌐 Server ready at ${url}` })
+        setPreviewUrl(url)
+        setStatus('running')
+      })
+      
+      // Set status to running
+      setStatus('running')
+      
+      return null // WebContainer handles the preview URL
+      
+    } catch (error) {
+      console.error('WebContainer failed:', error)
+      addLog({ type: 'error', message: `❌ WebContainer failed: ${error.message}` })
+      
+      // Fallback to static preview
+      return createFrameworkPreview(files, 'react')
     }
   }
 
@@ -542,6 +591,20 @@ const WorkspaceLayout = () => {
     
     const blob = new Blob([htmlContent], { type: 'text/html' })
     return URL.createObjectURL(blob)
+  }
+
+  // Helper function to detect project type
+  const detectProjectType = (packageJson) => {
+    const dependencies = { ...packageJson.dependencies, ...packageJson.devDependencies }
+    
+    if (dependencies.vite) return 'vite'
+    if (dependencies.next) return 'next'
+    if (dependencies['@vitejs/plugin-react']) return 'vite-react'
+    if (dependencies.react) return 'react'
+    if (dependencies.vue) return 'vue'
+    if (dependencies.angular) return 'angular'
+    
+    return 'static'
   }
 
   // Helper functions for framework preview
