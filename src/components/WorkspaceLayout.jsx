@@ -335,33 +335,12 @@ const WorkspaceLayout = () => {
             
             console.log('Dependencies found:', dependencies);
             
-            // Show loading state first
-            const root = document.getElementById('root');
-            if (root) {
-                root.innerHTML = \`
-                    <div style="padding: 40px; text-align: center; color: #666;">
-                        <div style="font-size: 48px; margin-bottom: 20px;">⚡</div>
-                        <h2 style="color: #333; margin-bottom: 20px;">Loading ${framework.toUpperCase()} Application...</h2>
-                        <p style="color: #666; margin-bottom: 30px;">
-                            Initializing your application with all dependencies...
-                        </p>
-                        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                            <h3 style="color: #333; margin-bottom: 10px;">📦 Dependencies:</h3>
-                            <p style="color: #666; font-family: monospace; font-size: 14px;">
-                                \${Object.keys(dependencies).slice(0, 5).join(', ')}
-                                \${Object.keys(dependencies).length > 5 ? '... and more' : ''}
-                            </p>
-                        </div>
-                    </div>
-                \`;
-            }
-            
-            // Actually execute the React application
+            // Actually execute the React application immediately
             setTimeout(() => {
                 try {
                     const root = document.getElementById('root');
                     if (root) {
-                        // Clear the loading state
+                        // Clear any loading state
                         root.innerHTML = '';
                         
                         // Try to find and execute the main React component
@@ -552,7 +531,7 @@ const WorkspaceLayout = () => {
                 } catch (error) {
                     console.error('Error in application initialization:', error);
                 }
-            }, 1500);
+            }, 500); // Reduced timeout to show content faster
             
         } catch (error) {
             console.error('Error initializing ${framework.toUpperCase()} app:', error);
