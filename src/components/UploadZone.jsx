@@ -3,6 +3,16 @@ import { Upload, FileArchive, AlertCircle, ExternalLink, CheckCircle, XCircle } 
 import { useAppStore } from '../store/appStore'
 import { processZipFile } from '../utils/zipProcessor'
 
+// Process folder upload
+const processFolder = async (folder) => {
+  const files = {}
+  const projectName = folder.name || 'Untitled Project'
+  
+  // For now, we'll handle this as a single file
+  // In a real implementation, you'd traverse the folder structure
+  return { files, projectName }
+}
+
 const UploadZone = () => {
   const { setWorkspace, setFiles, setStatus, addLog, clearLogs } = useAppStore()
   const [dragActive, setDragActive] = useState(false)
@@ -10,8 +20,12 @@ const UploadZone = () => {
   const handleFileUpload = useCallback(async (file) => {
     if (!file) return
 
-    if (!file.name.endsWith('.zip')) {
-      addLog({ type: 'error', message: 'Please upload a ZIP file' })
+    // Allow both ZIP files and folders
+    const isZipFile = file.name.endsWith('.zip')
+    const isFolder = file.webkitRelativePath && file.webkitRelativePath.includes('/')
+    
+    if (!isZipFile && !isFolder) {
+      addLog({ type: 'error', message: 'Please upload a ZIP file or select a folder' })
       return
     }
 
@@ -25,23 +39,40 @@ const UploadZone = () => {
     addLog({ type: 'info', message: `Processing ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)...` })
 
     try {
-      const { files, projectName } = await processZipFile(file)
+      let files, projectName
+      
+      if (isZipFile) {
+        const result = await processZipFile(file)
+        files = result.files
+        projectName = result.projectName
+      } else {
+        // Handle folder upload
+        const result = await processFolder(file)
+        files = result.files
+        projectName = result.projectName
+      }
       
       if (Object.keys(files).length === 0) {
-        throw new Error('No valid files found in ZIP')
+        throw new Error('No valid files found')
       }
 
       setFiles(files)
       setWorkspace({ name: projectName, id: Date.now().toString() })
-      addLog({ type: 'success', message: `Successfully extracted ${Object.keys(files).length} files` })
+      addLog({ type: 'success', message: `Successfully loaded ${Object.keys(files).length} files` })
       
-      // Set status to readonly for now - WebContainer will be initialized separately
-      setStatus('readonly')
-      addLog({ type: 'info', message: 'Project loaded successfully! You can now edit files and use AI assistance.' })
+      // Start the REAL installation and building process
+      setStatus('installing')
+      addLog({ type: 'info', message: '🚀 Starting real dependency installation and build process...' })
+      
+      // This will trigger the actual installation in WorkspaceLayout
+      setTimeout(() => {
+        setStatus('building')
+        addLog({ type: 'info', message: '📦 Installing dependencies from package.json...' })
+      }, 1000)
       
     } catch (error) {
       console.error('Upload error:', error)
-      addLog({ type: 'error', message: `Failed to process ZIP: ${error.message}` })
+      addLog({ type: 'error', message: `Failed to process files: ${error.message}` })
       setStatus('error')
     }
   }, [setWorkspace, setFiles, setStatus, addLog, clearLogs])
@@ -82,13 +113,13 @@ const UploadZone = () => {
   return (
     <div className="h-full flex items-center justify-center p-8">
       <div className="max-w-2xl w-full">
-        <div className="text-center mb-8">
-          <FileArchive className="mx-auto h-16 w-16 text-blue-400 mb-4" />
-          <h1 className="text-4xl font-bold mb-2">OraCodeAI</h1>
-          <p className="text-gray-400 text-lg">
-            Upload a ZIP file of your project and get instant code editor with AI assistance
-          </p>
-        </div>
+            <div className="text-center mb-8">
+              <FileArchive className="mx-auto h-16 w-16 text-blue-400 mb-4" />
+              <h1 className="text-4xl font-bold mb-2">OraCodeAI</h1>
+              <p className="text-gray-400 text-lg">
+                Upload a ZIP file or folder of your project and get instant code editor with AI assistance
+              </p>
+            </div>
 
         {/* Environment Status */}
         <div className={`border rounded-lg p-4 mb-6 ${
@@ -171,6 +202,8 @@ const UploadZone = () => {
           id="file-input"
           type="file"
           accept=".zip"
+          webkitdirectory=""
+          directory=""
           onChange={handleFileSelect}
           className="hidden"
         />

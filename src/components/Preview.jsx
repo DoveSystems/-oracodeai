@@ -130,29 +130,11 @@ const Preview = () => {
           )}
         </div>
         <div className="flex items-center space-x-2 flex-shrink-0">
-          {/* Preview Mode Selector */}
-          <div className="flex items-center space-x-1 bg-gray-700 rounded-lg p-1">
-            <button
-              onClick={() => setPreviewMode('localhost')}
-              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                previewMode === 'localhost' 
-                  ? 'bg-blue-600 text-white' 
-                  : 'text-gray-300 hover:text-white'
-              }`}
-            >
-              Localhost
-            </button>
-            <button
-              onClick={() => setPreviewMode('webcontainer')}
-              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                previewMode === 'webcontainer' 
-                  ? 'bg-blue-600 text-white' 
-                  : 'text-gray-300 hover:text-white'
-              }`}
-            >
-              WebContainer
-            </button>
-          </div>
+              {/* Live Preview Indicator */}
+              <div className="flex items-center space-x-2 bg-green-600/20 text-green-400 px-3 py-1 rounded-lg">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span className="text-xs font-medium">Live Preview</span>
+              </div>
           
           {previewUrl && (
             <>
