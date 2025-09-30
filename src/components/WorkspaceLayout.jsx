@@ -422,8 +422,8 @@ const WorkspaceLayout = () => {
                                                 <div style="background: #f8f9fa; border-radius: 12px; padding: 30px; margin: 30px 0; text-align: left;">
                                                     <h3 style="color: #333; margin-bottom: 15px; font-size: 20px;">📦 Project Structure:</h3>
                                                     <div style="font-family: 'Monaco', 'Menlo', monospace; font-size: 14px; color: #666; line-height: 1.6;">
-                                                        ${Object.keys(files).slice(0, 15).map(file => \`• \${file}\`).join('<br>')}
-                                                        ${Object.keys(files).length > 15 ? \`<br>• ... and \${Object.keys(files).length - 15} more files\` : ''}
+                                                        ${Object.keys(files).slice(0, 15).map(file => `• ${file}`).join('<br>')}
+                                                        ${Object.keys(files).length > 15 ? `<br>• ... and ${Object.keys(files).length - 15} more files` : ''}
                                                     </div>
                                                 </div>
                                                 
