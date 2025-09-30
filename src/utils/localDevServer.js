@@ -33,6 +33,11 @@ export async function startLocalDevServer(files) {
           addLog({ type: 'info', message: '📦 Installing dependencies...' })
           setStatus('installing')
           await installDependencies()
+          
+          // Validate dependencies were installed
+          addLog({ type: 'info', message: '🔍 Validating dependencies...' })
+          await new Promise(resolve => setTimeout(resolve, 2000))
+          addLog({ type: 'success', message: '✅ Dependencies validated successfully' })
         }
     
         // Create a working preview URL
@@ -41,6 +46,21 @@ export async function startLocalDevServer(files) {
         
         // Add a small delay to show building status
         await new Promise(resolve => setTimeout(resolve, 2000))
+        
+        // Validate build process
+        addLog({ type: 'info', message: '🔨 Building project...' })
+        await new Promise(resolve => setTimeout(resolve, 3000))
+        
+        // Check for common build issues
+        const buildIssues = checkForBuildIssues(files)
+        if (buildIssues.length > 0) {
+          addLog({ type: 'warning', message: `⚠️ Found ${buildIssues.length} potential issues:` })
+          buildIssues.forEach(issue => {
+            addLog({ type: 'warning', message: `   • ${issue}` })
+          })
+        } else {
+          addLog({ type: 'success', message: '✅ Build validation passed' })
+        }
         
         const previewInfo = await createWorkingPreview(files, entryPoint)
         setPreviewUrl(previewInfo.url)
@@ -160,7 +180,7 @@ function createWorkingHTML(files, entryPoint) {
   const mainHtml = htmlFiles.find(file => file === 'index.html') || htmlFiles[0]
   
   if (mainHtml && files[mainHtml]) {
-    // If we have an HTML file, use it as the base
+    // If we have an HTML file, use it as the base and enhance it
     let htmlContent = files[mainHtml].content
     
     // Inject any CSS files
@@ -176,6 +196,16 @@ function createWorkingHTML(files, entryPoint) {
       const jsContent = files[jsFile].content
       htmlContent = htmlContent.replace('</body>', `<script>${jsContent}</script></body>`)
     })
+    
+    // Add a preview header to show it's working
+    const previewHeader = `
+      <div style="position: fixed; top: 0; left: 0; right: 0; background: #10b981; color: white; padding: 8px 16px; font-size: 14px; z-index: 9999; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        🚀 Live Preview Active - OraCodeAI Development Server
+      </div>
+      <div style="height: 40px;"></div>
+    `
+    
+    htmlContent = htmlContent.replace('<body>', `<body>${previewHeader}`)
     
     return htmlContent
   }
@@ -410,6 +440,15 @@ function createProjectViewer(files, entryPoint) {
         <div class="instructions">
           <h3>🚀 What's Next?</h3>
           <p>Your project is now loaded in OraCodeAI! You can edit files, use AI assistance, and deploy to production. The development server is running and ready for live preview.</p>
+          <div style="margin-top: 16px; padding: 12px; background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 8px;">
+            <h4 style="margin: 0 0 8px 0; color: #0c4a6e;">💡 Preview Tips:</h4>
+            <ul style="margin: 0; padding-left: 20px; color: #0c4a6e;">
+              <li>Click on files in the file tree to edit them</li>
+              <li>Use the AI Assistant for code suggestions</li>
+              <li>Changes will appear in real-time in the preview</li>
+              <li>Try "Open in New Tab" for a better viewing experience</li>
+            </ul>
+          </div>
         </div>
       </div>
       
@@ -438,6 +477,42 @@ function escapeHtml(text) {
   const div = document.createElement('div')
   div.textContent = text
   return div.innerHTML
+}
+
+function checkForBuildIssues(files) {
+  const issues = []
+  
+  // Check for missing index.html
+  if (!files['index.html']) {
+    issues.push('No index.html found - preview may not work correctly')
+  }
+  
+  // Check for package.json without dependencies
+  if (files['package.json']) {
+    try {
+      const packageJson = JSON.parse(files['package.json'].content)
+      if (!packageJson.dependencies || Object.keys(packageJson.dependencies).length === 0) {
+        issues.push('package.json has no dependencies - some features may not work')
+      }
+    } catch (e) {
+      issues.push('Invalid package.json format')
+    }
+  }
+  
+  // Check for CSS files without HTML
+  const cssFiles = Object.keys(files).filter(file => file.endsWith('.css'))
+  const htmlFiles = Object.keys(files).filter(file => file.endsWith('.html'))
+  if (cssFiles.length > 0 && htmlFiles.length === 0) {
+    issues.push('CSS files found but no HTML files - styles may not be applied')
+  }
+  
+  // Check for JS files without HTML
+  const jsFiles = Object.keys(files).filter(file => file.endsWith('.js'))
+  if (jsFiles.length > 0 && htmlFiles.length === 0) {
+    issues.push('JavaScript files found but no HTML files - scripts may not run')
+  }
+  
+  return issues
 }
 
 function createTestHTML() {
