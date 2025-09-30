@@ -53,16 +53,34 @@ const WorkspaceLayout = () => {
         const filesToMount = {}
         for (const [path, file] of Object.entries(files)) {
           if (file && file.content) {
-            filesToMount[path] = {
-              file: {
-                contents: file.content
+            // Sanitize file path to prevent EIO errors
+            const sanitizedPath = path
+              .replace(/[<>:"|?*]/g, '_') // Replace invalid characters
+              .replace(/\\/g, '/') // Normalize path separators
+              .replace(/\/+/g, '/') // Remove duplicate slashes
+              .replace(/^\/+/, '') // Remove leading slashes
+              .replace(/\/+$/, '') // Remove trailing slashes
+            
+            // Skip empty or invalid paths
+            if (sanitizedPath && sanitizedPath.length > 0) {
+              filesToMount[sanitizedPath] = {
+                file: {
+                  contents: file.content
+                }
               }
+            } else {
+              console.warn(`Skipping invalid file path: ${path}`)
             }
           }
         }
         
         console.log('Files to mount:', Object.keys(filesToMount))
         console.log('Sample file structure:', filesToMount[Object.keys(filesToMount)[0]])
+        
+        // Validate that we have files to mount
+        if (Object.keys(filesToMount).length === 0) {
+          throw new Error('No valid files to mount after sanitization')
+        }
         
         await webcontainer.mount(filesToMount)
         addLog({ type: 'success', message: '✅ Files mounted successfully' })
