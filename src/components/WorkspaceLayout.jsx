@@ -61,6 +61,9 @@ const WorkspaceLayout = () => {
           }
         }
         
+        console.log('Files to mount:', Object.keys(filesToMount))
+        console.log('Sample file structure:', filesToMount[Object.keys(filesToMount)[0]])
+        
         await webcontainer.mount(filesToMount)
         addLog({ type: 'success', message: '✅ Files mounted successfully' })
         
