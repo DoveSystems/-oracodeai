@@ -20,12 +20,11 @@ const UploadZone = () => {
   const handleFileUpload = useCallback(async (file) => {
     if (!file) return
 
-    // Allow both ZIP files and folders
-    const isZipFile = file.name.endsWith('.zip')
-    const isFolder = file.webkitRelativePath && file.webkitRelativePath.includes('/')
+    // Check if it's a ZIP file
+    const isZipFile = file.name && file.name.endsWith('.zip')
     
-    if (!isZipFile && !isFolder) {
-      addLog({ type: 'error', message: 'Please upload a ZIP file or select a folder' })
+    if (!isZipFile) {
+      addLog({ type: 'error', message: 'Please upload a ZIP file' })
       return
     }
 
@@ -39,18 +38,10 @@ const UploadZone = () => {
     addLog({ type: 'info', message: `Processing ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)...` })
 
     try {
-      let files, projectName
-      
-      if (isZipFile) {
-        const result = await processZipFile(file)
-        files = result.files
-        projectName = result.projectName
-      } else {
-        // Handle folder upload
-        const result = await processFolder(file)
-        files = result.files
-        projectName = result.projectName
-      }
+      // Process ZIP file
+      const result = await processZipFile(file)
+      const files = result.files
+      const projectName = result.projectName
       
       if (Object.keys(files).length === 0) {
         throw new Error('No valid files found')
@@ -117,7 +108,7 @@ const UploadZone = () => {
               <FileArchive className="mx-auto h-16 w-16 text-blue-400 mb-4" />
               <h1 className="text-4xl font-bold mb-2">OraCodeAI</h1>
               <p className="text-gray-400 text-lg">
-                Upload a ZIP file or folder of your project and get instant code editor with AI assistance
+                Upload a ZIP file of your project and get instant code editor with AI assistance
               </p>
             </div>
 
@@ -202,8 +193,6 @@ const UploadZone = () => {
           id="file-input"
           type="file"
           accept=".zip"
-          webkitdirectory=""
-          directory=""
           onChange={handleFileSelect}
           className="hidden"
         />
