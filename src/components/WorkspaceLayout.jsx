@@ -296,6 +296,7 @@ const WorkspaceLayout = () => {
       // Install dependencies with REAL installation process
       addLog({ type: 'info', message: '📦 Installing dependencies...' })
       addLog({ type: 'info', message: '⏳ This may take a few minutes...' })
+      addLog({ type: 'info', message: '🔄 Downloading packages from npm registry...' })
       
       const installProcess = await webcontainerInstance.spawn('npm', ['install'])
       
@@ -315,6 +316,12 @@ const WorkspaceLayout = () => {
             if (output.includes('npm WARN') || output.includes('npm ERR')) {
               addLog({ type: 'warning', message: `⚠️ ${output.trim()}` })
             }
+            if (output.includes('downloading') || output.includes('extracting')) {
+              addLog({ type: 'info', message: `🔄 ${output.trim()}` })
+            }
+            if (output.includes('audit') || output.includes('vulnerabilities')) {
+              addLog({ type: 'info', message: `🔍 ${output.trim()}` })
+            }
           }
         }))
         
@@ -330,9 +337,13 @@ const WorkspaceLayout = () => {
         })
       })
       
-      // Ask user to proceed to building phase
-      addLog({ type: 'info', message: '🎯 Dependencies installed! Ready to build your project.' })
-      addLog({ type: 'info', message: '⏳ Starting development server...' })
+      // Dependencies installed - now ask user to proceed
+      addLog({ type: 'success', message: '✅ Dependencies installed successfully!' })
+      addLog({ type: 'info', message: '🎯 Ready to build your project!' })
+      addLog({ type: 'info', message: '⏳ Proceeding to development server...' })
+      
+      // Add a delay to show the completion and give user time to see the progress
+      await new Promise(resolve => setTimeout(resolve, 3000))
       
       // Start development server with REAL build process
       const devProcess = await webcontainerInstance.spawn('npm', ['run', 'dev'])
