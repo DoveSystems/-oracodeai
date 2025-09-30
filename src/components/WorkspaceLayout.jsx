@@ -7,23 +7,36 @@ import LogsPanel from './LogsPanel'
 import StatusBar from './StatusBar'
 import Header from './Header'
 import AIChat from './AIChat'
-import { startLocalDevServer } from '../utils/localDevServer'
+import { initializeWebContainer } from '../utils/webcontainer'
 
 const WorkspaceLayout = () => {
-  const { files, showLogs, showAIChat } = useAppStore()
+  const { files, showLogs, showAIChat, setStatus, addLog } = useAppStore()
 
   useEffect(() => {
-    // Start local development server for testing (even with no files)
-    const startDevServer = async () => {
+    // Initialize WebContainer like in the original working version
+    const initializePreview = async () => {
       try {
-        await startLocalDevServer(files)
+        addLog({ type: 'info', message: '🚀 Preparing your project preview...' })
+        setStatus('installing')
+        
+        // Initialize WebContainer
+        const webcontainer = await initializeWebContainer()
+        if (webcontainer) {
+          addLog({ type: 'success', message: '✅ WebContainer initialized successfully' })
+          setStatus('running')
+        } else {
+          addLog({ type: 'warning', message: '⚠️ WebContainer not available, using fallback preview' })
+          setStatus('readonly')
+        }
       } catch (error) {
-        console.error('Failed to start development server:', error)
+        console.error('Failed to initialize preview:', error)
+        addLog({ type: 'error', message: `❌ Failed to initialize preview: ${error.message}` })
+        setStatus('error')
       }
     }
     
-    startDevServer()
-  }, [files])
+    initializePreview()
+  }, [files, addLog, setStatus])
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 layout-container">

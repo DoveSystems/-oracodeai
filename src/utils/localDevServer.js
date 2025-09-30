@@ -163,13 +163,21 @@ async function installDependencies() {
 }
 
 async function createWorkingPreview(files, entryPoint) {
-  // Create a working preview that actually works in development
+  // For React/Vue/Angular apps, we need to use WebContainer
   console.log(`Creating preview for ${entryPoint}`)
   
-  // Create a proper HTML document that works in new tabs
-  const htmlContent = createWorkingHTML(files, entryPoint)
+  // Check if this is a framework app that needs WebContainer
+  const isReactApp = files['package.json'] && files['package.json'].content.includes('react')
+  const isVueApp = files['package.json'] && files['package.json'].content.includes('vue')
+  const isAngularApp = files['package.json'] && files['package.json'].content.includes('angular')
   
-  // Create a blob URL that actually works in iframes
+  if (isReactApp || isVueApp || isAngularApp) {
+    console.log('Framework app detected, using WebContainer approach')
+    return await createWebContainerPreview(files, entryPoint)
+  }
+  
+  // For simple HTML apps, use the blob approach
+  const htmlContent = createWorkingHTML(files, entryPoint)
   const blob = new Blob([htmlContent], { type: 'text/html' })
   const blobUrl = URL.createObjectURL(blob)
   
@@ -542,6 +550,67 @@ function checkForBuildIssues(files) {
   }
   
   return issues
+}
+
+async function createWebContainerPreview(files, entryPoint) {
+  console.log('Creating WebContainer preview for framework app')
+  
+  try {
+    // Use the original WebContainer system
+    const { getWebContainer } = await import('./webcontainer.js')
+    const webcontainer = await getWebContainer()
+    
+    if (!webcontainer) {
+      throw new Error('WebContainer not available')
+    }
+    
+    // Mount the files
+    await webcontainer.mount(files)
+    console.log('Files mounted to WebContainer')
+    
+    // Install dependencies
+    console.log('Installing dependencies in WebContainer...')
+    const installProcess = await webcontainer.spawn('npm', ['install'])
+    const installExitCode = await installProcess.exit
+    
+    if (installExitCode !== 0) {
+      throw new Error('Failed to install dependencies')
+    }
+    console.log('Dependencies installed successfully')
+    
+    // Start the development server
+    console.log('Starting development server...')
+    const devServerProcess = await webcontainer.spawn('npm', ['run', 'dev'])
+    
+    // Wait for the server to be ready
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('WebContainer server startup timeout'))
+      }, 30000) // 30 second timeout
+      
+      webcontainer.on('server-ready', (port, url) => {
+        clearTimeout(timeout)
+        console.log('WebContainer server ready at:', url)
+        resolve({ url, type: 'webcontainer' })
+      })
+      
+      // Also check if the process exits with an error
+      devServerProcess.exit.then((exitCode) => {
+        if (exitCode !== 0) {
+          clearTimeout(timeout)
+          reject(new Error(`Development server exited with code ${exitCode}`))
+        }
+      })
+    })
+    
+  } catch (error) {
+    console.error('WebContainer failed, falling back to static preview:', error)
+    // Fallback to static preview
+    const htmlContent = createWorkingHTML(files, entryPoint)
+    const blob = new Blob([htmlContent], { type: 'text/html' })
+    const blobUrl = URL.createObjectURL(blob)
+    return { url: blobUrl, type: 'blob-url' }
+  }
 }
 
 function createFrameworkPreview(files, mainHtml, framework) {
