@@ -13,7 +13,12 @@ const WorkspaceLayout = () => {
   const { files, showLogs, showAIChat, setStatus, addLog } = useAppStore()
 
   useEffect(() => {
-    // Initialize WebContainer like in the original working version
+    // Only start preview if we have files uploaded
+    if (Object.keys(files).length === 0) {
+      return
+    }
+
+    // Initialize WebContainer and process the uploaded files
     const initializePreview = async () => {
       try {
         addLog({ type: 'info', message: '🚀 Preparing your project preview...' })
@@ -21,13 +26,56 @@ const WorkspaceLayout = () => {
         
         // Initialize WebContainer
         const webcontainer = await initializeWebContainer()
-        if (webcontainer) {
-          addLog({ type: 'success', message: '✅ WebContainer initialized successfully' })
-          setStatus('running')
-        } else {
+        if (!webcontainer) {
           addLog({ type: 'warning', message: '⚠️ WebContainer not available, using fallback preview' })
           setStatus('readonly')
+          return
         }
+        
+        addLog({ type: 'success', message: '✅ WebContainer initialized successfully' })
+        
+        // Mount the uploaded files to WebContainer
+        addLog({ type: 'info', message: `📁 Mounting ${Object.keys(files).length} files to WebContainer...` })
+        await webcontainer.mount(files)
+        addLog({ type: 'success', message: '✅ Files mounted successfully' })
+        
+        // Install dependencies if package.json exists
+        if (files['package.json']) {
+          addLog({ type: 'info', message: '📦 Installing dependencies...' })
+          setStatus('installing')
+          
+          const installProcess = await webcontainer.spawn('npm', ['install'])
+          const installExitCode = await installProcess.exit
+          
+          if (installExitCode !== 0) {
+            throw new Error('Failed to install dependencies')
+          }
+          
+          addLog({ type: 'success', message: '✅ Dependencies installed successfully' })
+        }
+        
+        // Start the development server
+        addLog({ type: 'info', message: '🔧 Starting development server...' })
+        setStatus('building')
+        
+        const devServerProcess = await webcontainer.spawn('npm', ['run', 'dev'])
+        
+        // Wait for the server to be ready
+        webcontainer.on('server-ready', (port, url) => {
+          addLog({ type: 'success', message: `🎉 Development server ready at ${url}` })
+          setStatus('running')
+          // Set the preview URL in the store
+          useAppStore.getState().setPreviewUrl(url)
+        })
+        
+        // Check for server startup errors
+        devServerProcess.exit.then((exitCode) => {
+          if (exitCode !== 0) {
+            addLog({ type: 'error', message: `❌ Development server failed with exit code ${exitCode}` })
+            setStatus('error')
+          }
+        })
+        
       } catch (error) {
         console.error('Failed to initialize preview:', error)
         addLog({ type: 'error', message: `❌ Failed to initialize preview: ${error.message}` })
