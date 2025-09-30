@@ -14,7 +14,7 @@ const WorkspaceLayout = () => {
 
   useEffect(() => {
     // Only start preview if we have files uploaded
-    if (Object.keys(files).length === 0) {
+    if (!files || Object.keys(files).length === 0) {
       return
     }
 
@@ -23,6 +23,18 @@ const WorkspaceLayout = () => {
       try {
         addLog({ type: 'info', message: '🚀 Preparing your project preview...' })
         setStatus('installing')
+        
+        // Validate files object
+        if (!files || typeof files !== 'object') {
+          throw new Error('Files object is invalid or undefined')
+        }
+        
+        const fileCount = Object.keys(files).length
+        if (fileCount === 0) {
+          throw new Error('No files to process')
+        }
+        
+        addLog({ type: 'info', message: `📁 Found ${fileCount} files to process` })
         
         // Initialize WebContainer
         const webcontainer = await initializeWebContainer()
@@ -35,8 +47,21 @@ const WorkspaceLayout = () => {
         addLog({ type: 'success', message: '✅ WebContainer initialized successfully' })
         
         // Mount the uploaded files to WebContainer
-        addLog({ type: 'info', message: `📁 Mounting ${Object.keys(files).length} files to WebContainer...` })
-        await webcontainer.mount(files)
+        addLog({ type: 'info', message: `📁 Mounting ${fileCount} files to WebContainer...` })
+        
+        // Convert files to the format WebContainer expects
+        const filesToMount = {}
+        for (const [path, file] of Object.entries(files)) {
+          if (file && file.content) {
+            filesToMount[path] = {
+              file: {
+                contents: file.content
+              }
+            }
+          }
+        }
+        
+        await webcontainer.mount(filesToMount)
         addLog({ type: 'success', message: '✅ Files mounted successfully' })
         
         // Install dependencies if package.json exists
