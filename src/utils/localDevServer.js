@@ -24,30 +24,34 @@ export async function startLocalDevServer(files) {
     
     addLog({ type: 'info', message: `📁 Found entry point: ${entryPoint}` })
     
-    // Simulate project setup
-    addLog({ type: 'info', message: '📂 Setting up project environment...' })
-    await new Promise(resolve => setTimeout(resolve, 1000))
+        // Simulate project setup
+        addLog({ type: 'info', message: '📂 Setting up project environment...' })
+        await new Promise(resolve => setTimeout(resolve, 2000))
+        
+        // Install dependencies if package.json exists
+        if (files['package.json']) {
+          addLog({ type: 'info', message: '📦 Installing dependencies...' })
+          setStatus('installing')
+          await installDependencies()
+        }
     
-    // Install dependencies if package.json exists
-    if (files['package.json']) {
-      addLog({ type: 'info', message: '📦 Installing dependencies...' })
-      setStatus('installing')
-      await installDependencies()
-    }
-    
-    // Create a working preview URL
-    addLog({ type: 'info', message: '🔧 Creating preview environment...' })
-    setStatus('building')
-    
-    const previewInfo = await createWorkingPreview(files, entryPoint)
-    setPreviewUrl(previewInfo.url)
-    setStatus('running')
-    
-    console.log('Preview URL created:', previewInfo.url)
-    console.log('Preview type:', previewInfo.type)
-    
-    addLog({ type: 'success', message: `✅ Preview ready at ${previewInfo.url.substring(0, 50)}...` })
-    addLog({ type: 'info', message: '🎉 Your project is now live! You can edit files and see changes in real-time.' })
+        // Create a working preview URL
+        addLog({ type: 'info', message: '🔧 Creating preview environment...' })
+        setStatus('building')
+        
+        // Add a small delay to show building status
+        await new Promise(resolve => setTimeout(resolve, 2000))
+        
+        const previewInfo = await createWorkingPreview(files, entryPoint)
+        setPreviewUrl(previewInfo.url)
+        setStatus('running')
+        
+        console.log('Preview URL created:', previewInfo.url)
+        console.log('Preview type:', previewInfo.type)
+        
+        addLog({ type: 'success', message: `✅ Preview ready at ${previewInfo.url.substring(0, 50)}...` })
+        addLog({ type: 'info', message: '🎉 Your project is now live! You can edit files and see changes in real-time.' })
+        addLog({ type: 'info', message: '💡 Tip: Use "Open in New Tab" for a better viewing experience!' })
     
     return { success: true, url: previewInfo.url, type: previewInfo.type }
     
@@ -121,7 +125,7 @@ function findEntryPoint(files) {
 }
 
 async function installDependencies() {
-  // Simulate npm install
+  // Simulate npm install with more realistic timing
   console.log('Installing dependencies...')
   
   // In a real implementation, you would:
@@ -133,7 +137,7 @@ async function installDependencies() {
     setTimeout(() => {
       console.log('Dependencies installed successfully')
       resolve()
-    }, 2000)
+    }, 5000) // Increased from 2s to 5s
   })
 }
 

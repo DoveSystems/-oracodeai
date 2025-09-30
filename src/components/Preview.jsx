@@ -18,12 +18,27 @@ const Preview = () => {
 
   const handleOpenExternal = () => {
     if (previewUrl) {
-      // For data URLs, create a new window with the content
+      // For data URLs, create a proper blob URL that works in new tabs
       if (previewUrl.startsWith('data:')) {
-        const newWindow = window.open('', '_blank')
-        if (newWindow) {
-          newWindow.document.write(decodeURIComponent(previewUrl.split(',')[1]))
-          newWindow.document.close()
+        try {
+          // Extract the content from data URL
+          const base64Content = previewUrl.split(',')[1]
+          const htmlContent = decodeURIComponent(base64Content)
+          
+          // Create a blob URL instead of data URL for better compatibility
+          const blob = new Blob([htmlContent], { type: 'text/html' })
+          const blobUrl = URL.createObjectURL(blob)
+          
+          // Open in new tab with blob URL
+          const newWindow = window.open(blobUrl, '_blank')
+          if (newWindow) {
+            // Clean up the blob URL after a delay
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
+          }
+        } catch (error) {
+          console.error('Failed to open preview in new tab:', error)
+          // Fallback: try opening the data URL directly
+          window.open(previewUrl, '_blank')
         }
       } else {
         window.open(previewUrl, '_blank')
