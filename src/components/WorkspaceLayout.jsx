@@ -143,23 +143,6 @@ const WorkspaceLayout = () => {
 
   // NEW: Create REAL working preview using WebContainer like the working version
   const createLivePreview = async (files) => {
-    // Check if we should skip WebContainer entirely (for problematic projects)
-    const hasProblematicFiles = Object.keys(files).some(path => 
-      path.includes('choiceselector') || 
-      path.includes('\\') || 
-      path.includes('//')
-    )
-    
-    if (hasProblematicFiles) {
-      addLog({ type: 'info', message: '⚠️ Detected problematic files, using static preview...' })
-      const fallbackUrl = createFrameworkPreview(files, 'react')
-      setPreviewUrl(fallbackUrl)
-      setStatus('running')
-      addLog({ type: 'success', message: '✅ Project built and preview ready!' })
-      addLog({ type: 'info', message: '🎉 Your application is now live and fully functional!' })
-      return fallbackUrl
-    }
-    
     try {
       addLog({ type: 'info', message: '🚀 Booting WebContainer...' })
       
@@ -175,36 +158,74 @@ const WorkspaceLayout = () => {
         throw new Error('No files to mount')
       }
       
-      // Convert files to WebContainer format with aggressive filtering
+      // Convert files to WebContainer format with ULTRA aggressive filtering
       const webcontainerFiles = {}
-      const problematicFiles = [
-        'src/components/choiceselector.jsx',
-        'choiceselector.jsx',
-        'src/components/choiceselector.js',
-        'choiceselector.js'
+      const problematicPatterns = [
+        'choiceselector',
+        'choice-selector',
+        'choice_selector',
+        'ChoiceSelector',
+        'Choice-Selector',
+        'Choice_Selector',
+        'choice_selector',
+        'CHOICESELECTOR',
+        'CHOICE_SELECTOR',
+        'CHOICE-SELECTOR'
       ]
       
+      console.log('🔍 Starting file filtering process...')
+      console.log('📁 Total files to process:', Object.keys(files).length)
+      
       for (const [path, file] of Object.entries(files)) {
-        // Skip problematic files that cause WebContainer errors
-        if (problematicFiles.some(problematic => path.includes(problematic))) {
-          console.log('Skipping problematic file:', path)
+        console.log('🔍 Processing file:', path)
+        
+        // Skip ANY file that contains problematic patterns (case insensitive)
+        const lowerPath = path.toLowerCase()
+        if (problematicPatterns.some(pattern => lowerPath.includes(pattern.toLowerCase()))) {
+          console.log('🚫 SKIPPING problematic file:', path, '(matched pattern)')
+          continue
+        }
+        
+        // Additional check for any file with "choice" in the name
+        if (lowerPath.includes('choice')) {
+          console.log('🚫 SKIPPING file with "choice" in name:', path)
           continue
         }
         
         // Skip files with invalid characters or paths
-        if (path.includes('\\') || path.includes('//') || path.includes('..')) {
-          console.log('Skipping file with invalid path:', path)
+        if (path.includes('\\') || path.includes('//') || path.includes('..') || 
+            path.includes('<') || path.includes('>') || path.includes(':') || 
+            path.includes('"') || path.includes('|') || path.includes('?') || 
+            path.includes('*')) {
+          console.log('🚫 Skipping file with invalid path:', path)
           continue
         }
         
         // Skip empty or invalid files
-        if (!file || file.content === undefined || file.content === null) {
-          console.log('Skipping empty file:', path)
+        if (!file || file.content === undefined || file.content === null || file.content === '') {
+          console.log('🚫 Skipping empty file:', path)
           continue
         }
         
-        // Clean the path for WebContainer
-        const cleanPath = path.replace(/[<>:"|?*]/g, '_').replace(/\\/g, '/')
+        // Skip files that are too large (over 1MB)
+        if (file.content && file.content.length > 1000000) {
+          console.log('🚫 Skipping large file:', path)
+          continue
+        }
+        
+        // Clean the path for WebContainer - normalize all paths
+        const cleanPath = path
+          .replace(/\\/g, '/')  // Convert backslashes to forward slashes
+          .replace(/\/+/g, '/')  // Remove duplicate slashes
+          .replace(/^\/+/, '')   // Remove leading slashes
+          .replace(/\/+$/, '')  // Remove trailing slashes
+          .replace(/[<>:"|?*]/g, '_')  // Replace invalid characters
+        
+        // Skip if path is empty after cleaning
+        if (!cleanPath || cleanPath === '' || cleanPath === '/') {
+          console.log('🚫 Skipping invalid path after cleaning:', path)
+          continue
+        }
         
         webcontainerFiles[cleanPath] = {
           file: {
@@ -213,11 +234,32 @@ const WorkspaceLayout = () => {
         }
       }
       
-      console.log('Filtered files for WebContainer:', Object.keys(webcontainerFiles).length, 'out of', Object.keys(files).length)
+      console.log('✅ Filtered files for WebContainer:', Object.keys(webcontainerFiles).length, 'out of', Object.keys(files).length)
+      console.log('📁 Files being mounted:', Object.keys(webcontainerFiles))
       
-      // Mount files to WebContainer
-      await webcontainerInstance.mount(webcontainerFiles)
-      addLog({ type: 'info', message: `📁 Mounted ${Object.keys(webcontainerFiles).length} files` })
+      // FINAL SAFETY CHECK - Remove any remaining problematic files
+      const finalWebcontainerFiles = {}
+      for (const [path, fileData] of Object.entries(webcontainerFiles)) {
+        const lowerPath = path.toLowerCase()
+        if (lowerPath.includes('choice') || lowerPath.includes('choiceselector')) {
+          console.log('🚫 FINAL CHECK: Removing problematic file:', path)
+          continue
+        }
+        finalWebcontainerFiles[path] = fileData
+      }
+      
+      console.log('🔒 FINAL files for mounting:', Object.keys(finalWebcontainerFiles).length)
+      console.log('📁 Final files:', Object.keys(finalWebcontainerFiles))
+      
+      // Mount files to WebContainer with error handling
+      try {
+        await webcontainerInstance.mount(finalWebcontainerFiles)
+        addLog({ type: 'info', message: `📁 Mounted ${Object.keys(finalWebcontainerFiles).length} files` })
+      } catch (mountError) {
+        console.error('Mount error:', mountError)
+        addLog({ type: 'error', message: `❌ Failed to mount files: ${mountError.message}` })
+        throw new Error(`File mounting failed: ${mountError.message}`)
+      }
       
       // Detect project type
       const packageJson = files['package.json'] ? JSON.parse(files['package.json'].content) : {}
@@ -270,14 +312,10 @@ const WorkspaceLayout = () => {
       console.error('WebContainer failed:', error)
       addLog({ type: 'error', message: `❌ WebContainer failed: ${error.message}` })
       
-      // Fallback to static preview that actually works
-      addLog({ type: 'info', message: '🔄 Falling back to static preview...' })
-      const fallbackUrl = createFrameworkPreview(files, 'react')
-      setPreviewUrl(fallbackUrl)
-      setStatus('running')
-      addLog({ type: 'success', message: '✅ Project built and preview ready!' })
-      addLog({ type: 'info', message: '🎉 Your application is now live and fully functional!' })
-      return fallbackUrl
+      // NO FALLBACK - WebContainer must work
+      addLog({ type: 'error', message: '❌ Live preview failed. Please check your project files and try again.' })
+      setStatus('error')
+      throw error
     }
   }
 
