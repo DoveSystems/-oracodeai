@@ -3,15 +3,28 @@ import { useAppStore } from '../store/appStore'
 import { initializeWebContainer } from './webcontainer'
 
 export async function restartProject() {
-  const { addLog, clearLogs } = useAppStore.getState()
+  const { addLog, clearLogs, files, setStatus } = useAppStore.getState()
   
   clearLogs()
-  addLog({ type: 'info', message: 'Restarting project...' })
+  addLog({ type: 'info', message: '🔄 Restarting project...' })
+  setStatus('installing')
   
   try {
-    await initializeWebContainer()
+    // Re-trigger the preview process with existing files
+    if (Object.keys(files).length > 0) {
+      addLog({ type: 'info', message: '🚀 Re-initializing preview with existing files...' })
+      
+      // Import the preview function from WorkspaceLayout
+      const { createLivePreview } = await import('../components/WorkspaceLayout')
+      
+      // Re-run the preview process
+      await createLivePreview(files)
+    } else {
+      addLog({ type: 'warning', message: '⚠️ No files to restart. Please upload a project first.' })
+    }
   } catch (error) {
-    addLog({ type: 'error', message: `Failed to restart: ${error.message}` })
+    addLog({ type: 'error', message: `❌ Failed to restart: ${error.message}` })
+    setStatus('error')
   }
 }
 

@@ -162,6 +162,24 @@ const WorkspaceLayout = () => {
       
       // Convert files to WebContainer format with ULTRA aggressive filtering
       const webcontainerFiles = {}
+      
+      // WHITELIST APPROACH - Only allow essential files that are known to work
+      const safeFiles = [
+        'package.json',
+        'index.html',
+        'src/main.js',
+        'src/main.jsx',
+        'src/index.js',
+        'src/index.jsx',
+        'src/App.js',
+        'src/App.jsx',
+        'vite.config.js',
+        'tailwind.config.js',
+        'postcss.config.js',
+        '.env',
+        'README.md'
+      ]
+      
       const problematicPatterns = [
         'choiceselector',
         'choice-selector',
@@ -216,8 +234,23 @@ const WorkspaceLayout = () => {
       addLog({ type: 'info', message: '🚀 Starting WebContainer preview process...' })
       addLog({ type: 'info', message: `📁 Processing ${Object.keys(files).length} files from your upload...` })
       
+      // Show which files are being processed
+      const fileList = Object.keys(files).slice(0, 10).join(', ')
+      addLog({ type: 'info', message: `📋 Sample files: ${fileList}${Object.keys(files).length > 10 ? '...' : ''}` })
+      
       for (const [path, file] of Object.entries(files)) {
         console.log('🔍 Processing file:', path)
+        
+        // WHITELIST APPROACH - Only allow safe files
+        const isSafeFile = safeFiles.some(safeFile => 
+          path.toLowerCase() === safeFile.toLowerCase() || 
+          path.toLowerCase().includes(safeFile.toLowerCase())
+        )
+        
+        if (!isSafeFile) {
+          console.log('🚫 SKIPPING non-whitelisted file:', path)
+          continue
+        }
         
         // Skip ONLY the specific problematic files that cause EIO errors
         const lowerPath = path.toLowerCase()

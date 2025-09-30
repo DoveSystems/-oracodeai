@@ -25,8 +25,29 @@ const Header = () => {
   }
 
   const handleShowDiagnostics = () => {
-    // Add diagnostics functionality here
-    console.log('Diagnostics clicked')
+    const { addLog } = useAppStore.getState()
+    
+    addLog({ type: 'info', message: '🔍 Running diagnostics...' })
+    
+    // Check WebContainer support
+    const isWebContainerSupported = globalThis.crossOriginIsolated
+    addLog({ type: isWebContainerSupported ? 'success' : 'error', 
+      message: `WebContainer Support: ${isWebContainerSupported ? '✅ Available' : '❌ Not Available'}` })
+    
+    // Check if files are loaded
+    const fileCount = Object.keys(files).length
+    addLog({ type: 'info', message: `📁 Files loaded: ${fileCount}` })
+    
+    // Check browser compatibility
+    const hasRequiredAPIs = typeof WebContainer !== 'undefined' || 
+                           (typeof import !== 'undefined')
+    addLog({ type: hasRequiredAPIs ? 'success' : 'warning', 
+      message: `Browser APIs: ${hasRequiredAPIs ? '✅ Compatible' : '⚠️ Limited'}` })
+    
+    // Check current status
+    addLog({ type: 'info', message: `📊 Current status: ${status}` })
+    
+    addLog({ type: 'success', message: '✅ Diagnostics complete!' })
   }
 
   return (
