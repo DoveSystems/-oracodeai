@@ -168,10 +168,11 @@ async function createWorkingPreview(files, entryPoint) {
   // Create a proper HTML document that works in new tabs
   const htmlContent = createWorkingHTML(files, entryPoint)
   
-  // For development, use a data URL that works reliably
-  const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`
+  // Use a simple approach that actually works
+  const blob = new Blob([htmlContent], { type: 'text/html' })
+  const blobUrl = URL.createObjectURL(blob)
   
-  return { url: dataUrl, type: 'data-url' }
+  return { url: blobUrl, type: 'blob-url' }
 }
 
 function createWorkingHTML(files, entryPoint) {
@@ -180,7 +181,7 @@ function createWorkingHTML(files, entryPoint) {
   const mainHtml = htmlFiles.find(file => file === 'index.html') || htmlFiles[0]
   
   if (mainHtml && files[mainHtml]) {
-    // If we have an HTML file, use it as the base and enhance it
+    // If we have an HTML file, use it as the base
     let htmlContent = files[mainHtml].content
     
     // Inject any CSS files
@@ -197,26 +198,16 @@ function createWorkingHTML(files, entryPoint) {
       htmlContent = htmlContent.replace('</body>', `<script>${jsContent}</script></body>`)
     })
     
-    // Add a preview header to show it's working
-    const previewHeader = `
-      <div style="position: fixed; top: 0; left: 0; right: 0; background: #10b981; color: white; padding: 8px 16px; font-size: 14px; z-index: 9999; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-        🚀 Live Preview Active - OraCodeAI Development Server
-      </div>
-      <div style="height: 40px;"></div>
-    `
-    
-    htmlContent = htmlContent.replace('<body>', `<body>${previewHeader}`)
-    
     return htmlContent
   }
   
-  // If no HTML file, create a simple test HTML or project viewer
+  // If no HTML file, create a simple project viewer
   if (Object.keys(files).length === 0) {
-    // Create a simple test HTML for development
     return createTestHTML()
   }
   
-  return createProjectViewer(files, entryPoint)
+  // Create a simple project overview
+  return createSimpleProjectViewer(files, entryPoint)
 }
 
 function createProjectViewer(files, entryPoint) {
@@ -515,119 +506,227 @@ function checkForBuildIssues(files) {
   return issues
 }
 
-function createTestHTML() {
-  return `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>OraCodeAI - Test Preview</title>
-      <style>
+function createSimpleProjectViewer(files, entryPoint) {
+  const fileList = Object.keys(files).slice(0, 10).map(file => {
+    const icon = getFileIcon(file)
+    return `<div style="padding: 8px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 8px;">
+      <span>${icon}</span>
+      <span style="font-family: monospace; font-size: 14px;">${file}</span>
+    </div>`
+  }).join('')
+  
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Preview - OraCodeAI</title>
+    <style>
         body {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          margin: 0;
-          padding: 20px;
-          min-height: 100vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
         }
         .container {
-          background: white;
-          border-radius: 16px;
-          padding: 40px;
-          text-align: center;
-          box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-          max-width: 600px;
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 800px;
+            margin: 0 auto;
         }
         .logo {
-          width: 80px;
-          height: 80px;
-          background: linear-gradient(135deg, #667eea, #764ba2);
-          border-radius: 16px;
-          margin: 0 auto 20px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 32px;
-          color: white;
-          font-weight: bold;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 12px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            font-weight: bold;
         }
         h1 {
-          color: #2d3748;
-          margin-bottom: 10px;
-          font-size: 32px;
-        }
-        p {
-          color: #718096;
-          margin-bottom: 20px;
-          font-size: 18px;
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 28px;
+            text-align: center;
         }
         .status {
-          background: #f0fff4;
-          border: 1px solid #9ae6b4;
-          color: #22543d;
-          padding: 12px 16px;
-          border-radius: 8px;
-          margin: 20px 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
+            background: #f0fff4;
+            border: 1px solid #9ae6b4;
+            color: #22543d;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
         .status-dot {
-          width: 8px;
-          height: 8px;
-          background: #38a169;
-          border-radius: 50%;
-          animation: pulse 2s infinite;
+            width: 8px;
+            height: 8px;
+            background: #38a169;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
         }
         @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .file-list {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+        }
+        .file-count {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">OA</div>
+        <h1>Project Preview</h1>
+        
+        <div class="status">
+            <div class="status-dot"></div>
+            <span>Live Preview Active</span>
+        </div>
+        
+        <div class="file-list">
+            <div class="file-count">📁 Project Files (${Object.keys(files).length} files)</div>
+            ${fileList}
+            ${Object.keys(files).length > 10 ? `<div style="padding: 8px; color: #666; font-size: 14px;">... and ${Object.keys(files).length - 10} more files</div>` : ''}
+        </div>
+        
+        <p style="text-align: center; color: #666; margin-top: 20px;">
+            Your project is loaded and ready for development!
+        </p>
+    </div>
+</body>
+</html>`
+}
+
+function createTestHTML() {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OraCodeAI Preview</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 600px;
+        }
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 16px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            color: white;
+            font-weight: bold;
+        }
+        h1 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+        p {
+            color: #718096;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+        .status {
+            background: #f0fff4;
+            border: 1px solid #9ae6b4;
+            color: #22543d;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #38a169;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
         .test-button {
-          background: linear-gradient(135deg, #667eea, #764ba2);
-          color: white;
-          padding: 12px 24px;
-          border: none;
-          border-radius: 8px;
-          font-size: 16px;
-          cursor: pointer;
-          margin: 10px;
-          transition: transform 0.2s;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+            transition: transform 0.2s;
         }
         .test-button:hover {
-          transform: translateY(-2px);
+            transform: translateY(-2px);
         }
-      </style>
-    </head>
-    <body>
-      <div class="container">
+    </style>
+</head>
+<body>
+    <div class="container">
         <div class="logo">OA</div>
         <h1>OraCodeAI Preview</h1>
         <p>Your preview is working perfectly!</p>
         
         <div class="status">
-          <div class="status-dot"></div>
-          <span>Development Preview Active</span>
+            <div class="status-dot"></div>
+            <span>Development Preview Active</span>
         </div>
         
-        <p>This is a test preview to verify that the preview system is working correctly in your development environment.</p>
+        <p>This is a test preview to verify that the preview system is working correctly.</p>
         
         <button class="test-button" onclick="alert('Preview is working! 🎉')">
-          Test Interactive Feature
+            Test Interactive Feature
         </button>
         
         <p style="font-size: 14px; color: #a0aec0; margin-top: 20px;">
-          Upload a project file to see your actual project preview here.
+            Upload a project file to see your actual project preview here.
         </p>
-      </div>
-    </body>
-    </html>
-  `
+    </div>
+</body>
+</html>`
 }
 
 function createProjectPreview(files, entryPoint) {
