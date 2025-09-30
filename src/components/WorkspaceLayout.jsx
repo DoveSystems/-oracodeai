@@ -85,17 +85,32 @@ const WorkspaceLayout = () => {
               continue
             }
             
-            // Sanitize file path to prevent EIO errors
+            // Ultra-aggressive sanitization to prevent EIO errors
             let sanitizedPath = path
-              .replace(/[<>:"|?*\x00-\x1f\x7f-\x9f]/g, '_') // Replace invalid characters including control chars
-              .replace(/\\/g, '/') // Normalize path separators
-              .replace(/\/+/g, '/') // Remove duplicate slashes
-              .replace(/^\/+/, '') // Remove leading slashes
-              .replace(/\/+$/, '') // Remove trailing slashes
-              .replace(/[^\w\s\-_\.\/]/g, '_') // Replace any remaining non-alphanumeric chars except safe ones
-              .replace(/\s+/g, '_') // Replace spaces with underscores
-              .replace(/_+/g, '_') // Remove duplicate underscores
-              .replace(/^_+|_+$/g, '') // Remove leading/trailing underscores
+              // Remove ALL non-ASCII characters first
+              .replace(/[^\x00-\x7F]/g, '_')
+              // Remove control characters and invalid chars
+              .replace(/[<>:"|?*\x00-\x1f\x7f-\x9f]/g, '_')
+              // Normalize path separators
+              .replace(/\\/g, '/')
+              // Remove duplicate slashes
+              .replace(/\/+/g, '/')
+              // Remove leading/trailing slashes
+              .replace(/^\/+/, '').replace(/\/+$/, '')
+              // Replace any remaining non-alphanumeric chars except safe ones
+              .replace(/[^\w\s\-_\.\/]/g, '_')
+              // Replace spaces with underscores
+              .replace(/\s+/g, '_')
+              // Remove duplicate underscores
+              .replace(/_+/g, '_')
+              // Remove leading/trailing underscores
+              .replace(/^_+|_+$/g, '')
+              // Final cleanup - remove any remaining problematic chars
+              .replace(/[^\w\-_\.\/]/g, '_')
+              // Ensure it doesn't start with a dot (hidden files)
+              .replace(/^\.+/, '')
+              // Ensure it doesn't end with a dot
+              .replace(/\.+$/, '')
             
             // Additional path validation
             if (sanitizedPath.includes('..')) {
@@ -151,7 +166,7 @@ const WorkspaceLayout = () => {
               }
             }
             
-            // Special debugging for the problematic file
+            // Special handling for known problematic files
             if (path.includes('choiceselector')) {
               console.log(`🔍 Debugging choiceselector file:`)
               console.log(`  Original path: "${path}"`)
@@ -160,6 +175,11 @@ const WorkspaceLayout = () => {
               console.log(`  Sanitized length: ${sanitizedPath.length}`)
               console.log(`  Content size: ${contentSize} bytes`)
               console.log(`  Path bytes:`, Array.from(path).map(c => c.charCodeAt(0)))
+              
+              // Skip this problematic file entirely
+              console.log(`⚠️ Skipping problematic choiceselector file to prevent EIO error`)
+              skippedFiles.push({ path, reason: 'Known problematic file - skipping to prevent EIO error' })
+              continue
             }
             
           } catch (error) {
@@ -188,7 +208,13 @@ const WorkspaceLayout = () => {
         
         // Validate that we have files to mount
         if (Object.keys(filesToMount).length === 0) {
-          throw new Error('No valid files to mount after sanitization')
+          addLog({ type: 'warning', message: '⚠️ No files could be mounted - using fallback preview' })
+          // Create a fallback preview with project overview
+          const fallbackUrl = await createFallbackPreview(files)
+          setPreviewUrl(fallbackUrl)
+          setStatus('readonly')
+          addLog({ type: 'info', message: '📄 Fallback preview created - you can still edit files!' })
+          return
         }
         
         // Add user feedback about skipped files
@@ -337,12 +363,170 @@ const WorkspaceLayout = () => {
       } catch (error) {
         console.error('Failed to initialize preview:', error)
         addLog({ type: 'error', message: `❌ Failed to initialize preview: ${error.message}` })
-        setStatus('error')
+        
+        // Try fallback preview as last resort
+        try {
+          addLog({ type: 'info', message: '🔄 Attempting fallback preview...' })
+          const fallbackUrl = await createFallbackPreview(files)
+          setPreviewUrl(fallbackUrl)
+          setStatus('readonly')
+          addLog({ type: 'success', message: '✅ Fallback preview created successfully!' })
+        } catch (fallbackError) {
+          console.error('Fallback preview failed:', fallbackError)
+          setStatus('error')
+        }
       }
     }
     
     initializePreview()
   }, [files, addLog, setStatus])
+
+  // Fallback preview function
+  const createFallbackPreview = async (files) => {
+    const fileList = Object.keys(files).slice(0, 20).map(file => {
+      const icon = getFileIcon(file)
+      return `<div style="padding: 8px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 8px;">
+        <span>${icon}</span>
+        <span style="font-family: monospace; font-size: 14px;">${file}</span>
+      </div>`
+    }).join('')
+    
+    const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Preview - OraCodeAI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .logo {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 12px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            font-weight: bold;
+        }
+        h1 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 28px;
+            text-align: center;
+        }
+        .status {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            color: #92400e;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #f59e0b;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .file-list {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+        }
+        .file-count {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .warning {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">OA</div>
+        <h1>Project Preview</h1>
+        
+        <div class="status">
+            <div class="status-dot"></div>
+            <span>Fallback Preview Active</span>
+        </div>
+        
+        <div class="warning">
+            <strong>⚠️ WebContainer Preview Unavailable</strong><br>
+            Some files couldn't be mounted due to compatibility issues. You can still edit files using the code editor!
+        </div>
+        
+        <div class="file-list">
+            <div class="file-count">📁 Project Files (${Object.keys(files).length} files)</div>
+            ${fileList}
+            ${Object.keys(files).length > 20 ? `<div style="padding: 8px; color: #666; font-size: 14px;">... and ${Object.keys(files).length - 20} more files</div>` : ''}
+        </div>
+        
+        <p style="text-align: center; color: #666; margin-top: 20px;">
+            Your project is loaded and ready for development! Use the code editor to make changes.
+        </p>
+    </div>
+</body>
+</html>`
+    
+    const blob = new Blob([htmlContent], { type: 'text/html' })
+    return URL.createObjectURL(blob)
+  }
+
+  const getFileIcon = (filename) => {
+    if (filename.endsWith('.html')) return '🌐'
+    if (filename.endsWith('.js')) return '📜'
+    if (filename.endsWith('.css')) return '🎨'
+    if (filename.endsWith('.json')) return '📋'
+    if (filename.endsWith('.md')) return '📝'
+    if (filename.endsWith('.png') || filename.endsWith('.jpg') || filename.endsWith('.gif')) return '🖼️'
+    if (filename.endsWith('.svg')) return '🎨'
+    if (filename.endsWith('.ts')) return '📘'
+    if (filename.endsWith('.tsx')) return '⚛️'
+    if (filename.endsWith('.jsx')) return '⚛️'
+    if (filename.endsWith('.py')) return '🐍'
+    if (filename.endsWith('.java')) return '☕'
+    if (filename.endsWith('.php')) return '🐘'
+    if (filename.endsWith('.rb')) return '💎'
+    if (filename.endsWith('.go')) return '🐹'
+    if (filename.endsWith('.rs')) return '🦀'
+    return '📄'
+  }
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 layout-container">
