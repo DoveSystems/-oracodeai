@@ -168,11 +168,10 @@ async function createWorkingPreview(files, entryPoint) {
   // Create a proper HTML document that works in new tabs
   const htmlContent = createWorkingHTML(files, entryPoint)
   
-  // Use a simple approach that actually works
-  const blob = new Blob([htmlContent], { type: 'text/html' })
-  const blobUrl = URL.createObjectURL(blob)
+  // Use data URL approach that actually works
+  const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`
   
-  return { url: blobUrl, type: 'blob-url' }
+  return { url: dataUrl, type: 'data-url' }
 }
 
 function createWorkingHTML(files, entryPoint) {
