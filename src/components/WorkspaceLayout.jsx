@@ -170,11 +170,25 @@ const WorkspaceLayout = () => {
         'choice_selector',
         'CHOICESELECTOR',
         'CHOICE_SELECTOR',
-        'CHOICE-SELECTOR'
+        'CHOICE-SELECTOR',
+        'exportpanel',
+        'export-panel',
+        'export_panel',
+        'ExportPanel',
+        'Export-Panel',
+        'Export_Panel',
+        'EXPORTPANEL',
+        'EXPORT_PANEL',
+        'EXPORT-PANEL'
       ]
       
       console.log('🔍 Starting file filtering process...')
       console.log('📁 Total files to process:', Object.keys(files).length)
+      console.log('📋 All files:', Object.keys(files))
+      
+      // Whitelist approach - only allow essential files
+      const allowedExtensions = ['.js', '.jsx', '.ts', '.tsx', '.json', '.html', '.css', '.scss', '.md', '.txt']
+      const allowedFiles = ['package.json', 'index.html', 'main.js', 'main.jsx', 'App.js', 'App.jsx', 'index.js', 'index.jsx']
       
       for (const [path, file] of Object.entries(files)) {
         console.log('🔍 Processing file:', path)
@@ -186,9 +200,25 @@ const WorkspaceLayout = () => {
           continue
         }
         
-        // Additional check for any file with "choice" in the name
-        if (lowerPath.includes('choice')) {
-          console.log('🚫 SKIPPING file with "choice" in name:', path)
+        // Only allow files with safe extensions or known safe files
+        const hasAllowedExtension = allowedExtensions.some(ext => path.toLowerCase().endsWith(ext))
+        const isAllowedFile = allowedFiles.some(allowed => path.toLowerCase().includes(allowed.toLowerCase()))
+        
+        if (!hasAllowedExtension && !isAllowedFile) {
+          console.log('🚫 SKIPPING file with unsafe extension:', path)
+          continue
+        }
+        
+        // Additional checks for problematic file patterns
+        if (lowerPath.includes('choice') || lowerPath.includes('export') || 
+            lowerPath.includes('panel') || lowerPath.includes('selector')) {
+          console.log('🚫 SKIPPING file with problematic pattern:', path)
+          continue
+        }
+        
+        // Skip files with complex nested paths that might cause issues
+        if (path.split('/').length > 4) {
+          console.log('🚫 SKIPPING file with deep nesting:', path)
           continue
         }
         
@@ -241,7 +271,9 @@ const WorkspaceLayout = () => {
       const finalWebcontainerFiles = {}
       for (const [path, fileData] of Object.entries(webcontainerFiles)) {
         const lowerPath = path.toLowerCase()
-        if (lowerPath.includes('choice') || lowerPath.includes('choiceselector')) {
+        if (lowerPath.includes('choice') || lowerPath.includes('choiceselector') ||
+            lowerPath.includes('export') || lowerPath.includes('panel') ||
+            lowerPath.includes('selector') || lowerPath.includes('exportpanel')) {
           console.log('🚫 FINAL CHECK: Removing problematic file:', path)
           continue
         }
