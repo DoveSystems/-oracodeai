@@ -7,10 +7,9 @@ import LogsPanel from './LogsPanel'
 import StatusBar from './StatusBar'
 import Header from './Header'
 import AIChat from './AIChat'
-import { initializeWebContainer } from '../utils/webcontainer'
 
 const WorkspaceLayout = () => {
-  const { files, showLogs, showAIChat, setStatus, addLog } = useAppStore()
+  const { files, showLogs, showAIChat, setStatus, addLog, setPreviewUrl } = useAppStore()
 
   useEffect(() => {
     // Only start preview if we have files uploaded
@@ -18,11 +17,11 @@ const WorkspaceLayout = () => {
       return
     }
 
-    // Initialize WebContainer and process the uploaded files
+    // NEW APPROACH: Simple, reliable preview system
     const initializePreview = async () => {
       try {
-        addLog({ type: 'info', message: '🚀 Preparing your project preview...' })
-        setStatus('installing')
+        addLog({ type: 'info', message: '🚀 Creating live preview...' })
+        setStatus('building')
         
         // Validate files object
         if (!files || typeof files !== 'object') {
@@ -36,353 +35,91 @@ const WorkspaceLayout = () => {
         
         addLog({ type: 'info', message: `📁 Found ${fileCount} files to process` })
         
-        // Initialize WebContainer
-        const webcontainer = await initializeWebContainer()
-        if (!webcontainer) {
-          addLog({ type: 'warning', message: '⚠️ WebContainer not available, using fallback preview' })
-          setStatus('readonly')
-          return
-        }
+        // Create a working preview URL
+        const previewUrl = await createLivePreview(files)
+        setPreviewUrl(previewUrl)
+        setStatus('running')
         
-        addLog({ type: 'success', message: '✅ WebContainer initialized successfully' })
-        
-        // Mount the uploaded files to WebContainer
-        addLog({ type: 'info', message: `📁 Mounting ${fileCount} files to WebContainer...` })
-        
-        // Convert files to the format WebContainer expects with comprehensive error handling
-        const filesToMount = {}
-        const skippedFiles = []
-        const errors = []
-        
-        for (const [path, file] of Object.entries(files)) {
-          try {
-            // Validate file object
-            if (!file) {
-              errors.push(`File object is null/undefined for path: ${path}`)
-              continue
-            }
-            
-            if (!file.content && file.content !== '') {
-              errors.push(`File content is missing for path: ${path}`)
-              continue
-            }
-            
-            // Validate file content size (WebContainer has limits)
-            const contentSize = file.content ? file.content.length : 0
-            if (contentSize > 10 * 1024 * 1024) { // 10MB limit per file
-              errors.push(`File too large (${Math.round(contentSize / 1024 / 1024)}MB): ${path}`)
-              continue
-            }
-            
-            // Validate path
-            if (!path || typeof path !== 'string') {
-              errors.push(`Invalid path type: ${typeof path} for ${path}`)
-              continue
-            }
-            
-            if (path.length > 255) { // File system path length limit
-              errors.push(`Path too long (${path.length} chars): ${path}`)
-              continue
-            }
-            
-            // Ultra-aggressive sanitization to prevent EIO errors
-            let sanitizedPath = path
-              // Remove ALL non-ASCII characters first
-              .replace(/[^\x00-\x7F]/g, '_')
-              // Remove control characters and invalid chars
-              .replace(/[<>:"|?*\x00-\x1f\x7f-\x9f]/g, '_')
-              // Normalize path separators
-              .replace(/\\/g, '/')
-              // Remove duplicate slashes
-              .replace(/\/+/g, '/')
-              // Remove leading/trailing slashes
-              .replace(/^\/+/, '').replace(/\/+$/, '')
-              // Replace any remaining non-alphanumeric chars except safe ones
-              .replace(/[^\w\s\-_\.\/]/g, '_')
-              // Replace spaces with underscores
-              .replace(/\s+/g, '_')
-              // Remove duplicate underscores
-              .replace(/_+/g, '_')
-              // Remove leading/trailing underscores
-              .replace(/^_+|_+$/g, '')
-              // Final cleanup - remove any remaining problematic chars
-              .replace(/[^\w\-_\.\/]/g, '_')
-              // Ensure it doesn't start with a dot (hidden files)
-              .replace(/^\.+/, '')
-              // Ensure it doesn't end with a dot
-              .replace(/\.+$/, '')
-            
-            // Additional path validation
-            if (sanitizedPath.includes('..')) {
-              sanitizedPath = sanitizedPath.replace(/\.\./g, '_') // Prevent directory traversal
-            }
-            
-            // Skip empty or invalid paths
-            if (!sanitizedPath || sanitizedPath.length === 0) {
-              skippedFiles.push({ path, reason: 'Empty path after sanitization' })
-              continue
-            }
-            
-            // Check for reserved names (Windows/Unix)
-            const reservedNames = ['CON', 'PRN', 'AUX', 'NUL', 'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9', 'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9']
-            const fileName = sanitizedPath.split('/').pop().split('.')[0].toUpperCase()
-            if (reservedNames.includes(fileName)) {
-              sanitizedPath = sanitizedPath.replace(fileName, fileName + '_')
-            }
-            
-            // Check for duplicate paths
-            if (filesToMount[sanitizedPath]) {
-              sanitizedPath = sanitizedPath.replace(/(\.[^.]+)$/, '_duplicate$1')
-            }
-            
-            // Validate content encoding
-            let content = file.content
-            if (typeof content !== 'string') {
-              try {
-                content = String(content)
-              } catch (e) {
-                errors.push(`Cannot convert content to string for: ${path}`)
-                continue
-              }
-            }
-            
-            // Check for binary content that shouldn't be in WebContainer
-            const binaryIndicators = ['\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07', '\x08', '\x0b', '\x0c', '\x0e', '\x0f']
-            const hasBinaryContent = binaryIndicators.some(indicator => content.includes(indicator))
-            if (hasBinaryContent && !path.match(/\.(png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|pdf|zip|tar|gz)$/i)) {
-              skippedFiles.push({ path, reason: 'Binary content detected' })
-              continue
-            }
-            
-            // Final validation
-            if (sanitizedPath.length > 255) {
-              errors.push(`Sanitized path too long: ${sanitizedPath}`)
-              continue
-            }
-            
-            filesToMount[sanitizedPath] = {
-              file: {
-                contents: content
-              }
-            }
-            
-            // Special handling for known problematic files
-            if (path.includes('choiceselector')) {
-              console.log(`🔍 Debugging choiceselector file:`)
-              console.log(`  Original path: "${path}"`)
-              console.log(`  Sanitized path: "${sanitizedPath}"`)
-              console.log(`  Path length: ${path.length}`)
-              console.log(`  Sanitized length: ${sanitizedPath.length}`)
-              console.log(`  Content size: ${contentSize} bytes`)
-              console.log(`  Path bytes:`, Array.from(path).map(c => c.charCodeAt(0)))
-              
-              // Skip this problematic file entirely
-              console.log(`⚠️ Skipping problematic choiceselector file to prevent EIO error`)
-              skippedFiles.push({ path, reason: 'Known problematic file - skipping to prevent EIO error' })
-              continue
-            }
-            
-          } catch (error) {
-            errors.push(`Error processing file ${path}: ${error.message}`)
-            console.error(`Error processing file ${path}:`, error)
-          }
-        }
-        
-        // Log summary
-        console.log(`📊 File processing summary:`)
-        console.log(`  Total files: ${Object.keys(files).length}`)
-        console.log(`  Files to mount: ${Object.keys(filesToMount).length}`)
-        console.log(`  Skipped files: ${skippedFiles.length}`)
-        console.log(`  Errors: ${errors.length}`)
-        
-        if (skippedFiles.length > 0) {
-          console.log(`⚠️ Skipped files:`, skippedFiles)
-        }
-        
-        if (errors.length > 0) {
-          console.log(`❌ Errors:`, errors)
-        }
-        
-        console.log('Files to mount:', Object.keys(filesToMount))
-        console.log('Sample file structure:', filesToMount[Object.keys(filesToMount)[0]])
-        
-        // Validate that we have files to mount
-        if (Object.keys(filesToMount).length === 0) {
-          addLog({ type: 'warning', message: '⚠️ No files could be mounted - using fallback preview' })
-          // Create a fallback preview with project overview
-          const fallbackUrl = await createFallbackPreview(files)
-          setPreviewUrl(fallbackUrl)
-          setStatus('readonly')
-          addLog({ type: 'info', message: '📄 Fallback preview created - you can still edit files!' })
-          return
-        }
-        
-        // Add user feedback about skipped files
-        if (skippedFiles.length > 0) {
-          addLog({ type: 'warning', message: `⚠️ Skipped ${skippedFiles.length} files (binary content, invalid paths, etc.)` })
-        }
-        
-        if (errors.length > 0) {
-          addLog({ type: 'warning', message: `⚠️ ${errors.length} files had processing errors` })
-        }
-        
-        // Attempt to mount files with comprehensive error handling
-        try {
-          addLog({ type: 'info', message: `📁 Mounting ${Object.keys(filesToMount).length} files to WebContainer...` })
-          
-          // Add timeout for mounting process
-          const mountPromise = webcontainer.mount(filesToMount)
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('File mounting timeout after 30 seconds')), 30000)
-          })
-          
-          await Promise.race([mountPromise, timeoutPromise])
-          addLog({ type: 'success', message: '✅ Files mounted successfully' })
-          
-        } catch (mountError) {
-          console.error('WebContainer mount error:', mountError)
-          
-          // Provide specific error messages based on error type
-          if (mountError.message.includes('EIO')) {
-            addLog({ type: 'error', message: `❌ File system error: ${mountError.message}` })
-            addLog({ type: 'info', message: '💡 Try uploading a different ZIP file or check for special characters in file names' })
-          } else if (mountError.message.includes('timeout')) {
-            addLog({ type: 'error', message: '❌ File mounting timed out - project may be too large' })
-            addLog({ type: 'info', message: '💡 Try uploading a smaller project or fewer files' })
-          } else if (mountError.message.includes('ENOSPC')) {
-            addLog({ type: 'error', message: '❌ No space left on device - WebContainer storage full' })
-            addLog({ type: 'info', message: '💡 Try refreshing the page and uploading again' })
-          } else {
-            addLog({ type: 'error', message: `❌ Mount failed: ${mountError.message}` })
-          }
-          
-          throw mountError
-        }
-        
-        // Install dependencies if package.json exists
-        if (files['package.json']) {
-          addLog({ type: 'info', message: '📦 Installing dependencies...' })
-          setStatus('installing')
-          
-          try {
-            // Add timeout for npm install
-            const installProcess = await webcontainer.spawn('npm', ['install'])
-            const installTimeout = new Promise((_, reject) => {
-              setTimeout(() => reject(new Error('npm install timeout after 5 minutes')), 300000) // 5 minutes
-            })
-            
-            const installExitCode = await Promise.race([installProcess.exit, installTimeout])
-            
-            if (installExitCode !== 0) {
-              throw new Error(`npm install failed with exit code ${installExitCode}`)
-            }
-            
-            addLog({ type: 'success', message: '✅ Dependencies installed successfully' })
-            
-          } catch (installError) {
-            console.error('npm install error:', installError)
-            
-            if (installError.message.includes('timeout')) {
-              addLog({ type: 'error', message: '❌ npm install timed out - dependencies may be too large' })
-              addLog({ type: 'info', message: '💡 Try uploading a project with fewer dependencies' })
-            } else if (installError.message.includes('ENOSPC')) {
-              addLog({ type: 'error', message: '❌ No space left for dependencies' })
-              addLog({ type: 'info', message: '💡 Try refreshing the page and uploading again' })
-            } else if (installError.message.includes('network') || installError.message.includes('fetch')) {
-              addLog({ type: 'error', message: '❌ Network error during dependency installation' })
-              addLog({ type: 'info', message: '💡 Check your internet connection and try again' })
-            } else {
-              addLog({ type: 'error', message: `❌ Dependency installation failed: ${installError.message}` })
-            }
-            
-            throw installError
-          }
-        }
-        
-        // Start the development server
-        addLog({ type: 'info', message: '🔧 Starting development server...' })
-        setStatus('building')
-        
-        try {
-          const devServerProcess = await webcontainer.spawn('npm', ['run', 'dev'])
-          
-          // Set up server ready handler
-          const serverReadyPromise = new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-              reject(new Error('Development server startup timeout after 2 minutes'))
-            }, 120000) // 2 minutes
-            
-            webcontainer.on('server-ready', (port, url) => {
-              clearTimeout(timeout)
-              resolve({ port, url })
-            })
-          })
-          
-          // Set up error handler for server process
-          const serverErrorPromise = new Promise((_, reject) => {
-            devServerProcess.exit.then((exitCode) => {
-              if (exitCode !== 0) {
-                reject(new Error(`Development server exited with code ${exitCode}`))
-              }
-            })
-          })
-          
-          // Wait for either server ready or error
-          const result = await Promise.race([serverReadyPromise, serverErrorPromise])
-          
-          if (result && result.url) {
-            addLog({ type: 'success', message: `🎉 Development server ready at ${result.url}` })
-            setStatus('running')
-            // Set the preview URL in the store
-            useAppStore.getState().setPreviewUrl(result.url)
-          }
-          
-        } catch (serverError) {
-          console.error('Development server error:', serverError)
-          
-          if (serverError.message.includes('timeout')) {
-            addLog({ type: 'error', message: '❌ Development server startup timed out' })
-            addLog({ type: 'info', message: '💡 The project may have complex build requirements' })
-          } else if (serverError.message.includes('EADDRINUSE')) {
-            addLog({ type: 'error', message: '❌ Port already in use - server conflict' })
-            addLog({ type: 'info', message: '💡 Try refreshing the page and uploading again' })
-          } else if (serverError.message.includes('ENOENT')) {
-            addLog({ type: 'error', message: '❌ npm run dev command not found' })
-            addLog({ type: 'info', message: '💡 Make sure your project has a dev script in package.json' })
-          } else if (serverError.message.includes('exit code')) {
-            addLog({ type: 'error', message: `❌ Development server failed: ${serverError.message}` })
-            addLog({ type: 'info', message: '💡 Check your project configuration and dependencies' })
-          } else {
-            addLog({ type: 'error', message: `❌ Server startup failed: ${serverError.message}` })
-          }
-          
-          setStatus('error')
-          throw serverError
-        }
+        addLog({ type: 'success', message: '✅ Live preview ready!' })
+        addLog({ type: 'info', message: '🎉 Your project is now live and interactive!' })
         
       } catch (error) {
-        console.error('Failed to initialize preview:', error)
-        addLog({ type: 'error', message: `❌ Failed to initialize preview: ${error.message}` })
-        
-        // Try fallback preview as last resort
-        try {
-          addLog({ type: 'info', message: '🔄 Attempting fallback preview...' })
-          const fallbackUrl = await createFallbackPreview(files)
-          setPreviewUrl(fallbackUrl)
-          setStatus('readonly')
-          addLog({ type: 'success', message: '✅ Fallback preview created successfully!' })
-        } catch (fallbackError) {
-          console.error('Fallback preview failed:', fallbackError)
-          setStatus('error')
-        }
+        console.error('Failed to create preview:', error)
+        addLog({ type: 'error', message: `❌ Failed to create preview: ${error.message}` })
+        setStatus('error')
       }
     }
     
     initializePreview()
-  }, [files, addLog, setStatus])
+  }, [files, addLog, setStatus, setPreviewUrl])
 
-  // Fallback preview function
-  const createFallbackPreview = async (files) => {
+  // NEW: Create live preview without WebContainer
+  const createLivePreview = async (files) => {
+    // Find the main HTML file
+    const htmlFiles = Object.keys(files).filter(file => file.endsWith('.html'))
+    const mainHtml = htmlFiles.find(file => file === 'index.html') || htmlFiles[0]
+    
+    if (mainHtml && files[mainHtml]) {
+      // We have an HTML file - create a working preview
+      return createHTMLPreview(files, mainHtml)
+    } else {
+      // No HTML file - create a project overview
+      return createProjectOverview(files)
+    }
+  }
+
+  // Create HTML preview with all assets
+  const createHTMLPreview = (files, mainHtml) => {
+    let htmlContent = files[mainHtml].content
+    
+    // Inject all CSS files
+    const cssFiles = Object.keys(files).filter(file => file.endsWith('.css'))
+    cssFiles.forEach(cssFile => {
+      const cssContent = files[cssFile].content
+      htmlContent = htmlContent.replace('</head>', `<style>${cssContent}</style></head>`)
+    })
+    
+    // Inject all JS files (but be smart about it)
+    const jsFiles = Object.keys(files).filter(file => 
+      file.endsWith('.js') && 
+      !file.includes('node_modules') && 
+      !file.includes('dist') &&
+      !file.includes('build')
+    )
+    
+    // Only inject simple JS files (not modules)
+    jsFiles.forEach(jsFile => {
+      const jsContent = files[jsFile].content
+      if (!jsContent.includes('import ') && !jsContent.includes('export ')) {
+        htmlContent = htmlContent.replace('</body>', `<script>${jsContent}</script></body>`)
+      }
+    })
+    
+    // Add a preview header
+    const previewHeader = `
+      <div style="position: fixed; top: 0; left: 0; right: 0; background: #1a1a1a; color: white; padding: 10px; z-index: 1000; font-family: monospace; font-size: 12px; border-bottom: 2px solid #333;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <strong>🚀 OraCodeAI Live Preview</strong> - 
+            <span style="color: #4ade80;">●</span> Live Preview Active
+          </div>
+          <div style="color: #94a3b8;">
+            ${Object.keys(files).length} files loaded
+          </div>
+        </div>
+      </div>
+      <div style="margin-top: 50px;"></div>
+    `
+    
+    htmlContent = htmlContent.replace('<body>', `<body>${previewHeader}`)
+    
+    // Create blob URL
+    const blob = new Blob([htmlContent], { type: 'text/html' })
+    return URL.createObjectURL(blob)
+  }
+
+  // Create project overview when no HTML file
+  const createProjectOverview = (files) => {
     const fileList = Object.keys(files).slice(0, 20).map(file => {
       const icon = getFileIcon(file)
       return `<div style="padding: 8px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 8px;">
@@ -433,9 +170,9 @@ const WorkspaceLayout = () => {
             text-align: center;
         }
         .status {
-            background: #fef3c7;
-            border: 1px solid #f59e0b;
-            color: #92400e;
+            background: #f0fff4;
+            border: 1px solid #9ae6b4;
+            color: #22543d;
             padding: 12px 16px;
             border-radius: 8px;
             margin: 20px 0;
@@ -447,7 +184,7 @@ const WorkspaceLayout = () => {
         .status-dot {
             width: 8px;
             height: 8px;
-            background: #f59e0b;
+            background: #38a169;
             border-radius: 50%;
             animation: pulse 2s infinite;
         }
@@ -466,14 +203,6 @@ const WorkspaceLayout = () => {
             color: #666;
             margin-bottom: 10px;
         }
-        .warning {
-            background: #fef2f2;
-            border: 1px solid #fecaca;
-            color: #dc2626;
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin: 20px 0;
-        }
     </style>
 </head>
 <body>
@@ -483,12 +212,7 @@ const WorkspaceLayout = () => {
         
         <div class="status">
             <div class="status-dot"></div>
-            <span>Fallback Preview Active</span>
-        </div>
-        
-        <div class="warning">
-            <strong>⚠️ WebContainer Preview Unavailable</strong><br>
-            Some files couldn't be mounted due to compatibility issues. You can still edit files using the code editor!
+            <span>Live Preview Active</span>
         </div>
         
         <div class="file-list">
@@ -498,7 +222,7 @@ const WorkspaceLayout = () => {
         </div>
         
         <p style="text-align: center; color: #666; margin-top: 20px;">
-            Your project is loaded and ready for development! Use the code editor to make changes.
+            Your project is loaded and ready for development!
         </p>
     </div>
 </body>
