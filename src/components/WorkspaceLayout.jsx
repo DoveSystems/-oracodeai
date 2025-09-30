@@ -300,7 +300,7 @@ const WorkspaceLayout = () => {
     <!-- All JavaScript files -->
     ${allJS}
     
-    <script>
+    <script type="text/babel">
         // Initialize the ${framework.toUpperCase()} application with proper dependency handling
         console.log('🚀 Initializing ${framework.toUpperCase()} application...');
         
@@ -329,16 +329,6 @@ const WorkspaceLayout = () => {
         
         // Try to find and execute the main entry point
         try {
-            // Look for common entry points in dependency order
-            const entryPoints = [
-                'src/index.js',
-                'src/main.js', 
-                'src/App.js',
-                'src/app.js',
-                'index.js',
-                'main.js'
-            ];
-            
             // Check if we have a package.json to understand dependencies
             const hasPackageJson = ${files['package.json'] ? 'true' : 'false'};
             const dependencies = ${files['package.json'] ? JSON.stringify(JSON.parse(files['package.json'].content).dependencies || {}) : '{}'};
@@ -503,8 +493,8 @@ const WorkspaceLayout = () => {
                                                 <div style="background: #f8f9fa; border-radius: 12px; padding: 30px; margin: 30px 0; text-align: left;">
                                                     <h3 style="color: #333; margin-bottom: 15px; font-size: 20px;">📦 Project Structure:</h3>
                                                     <div style="font-family: 'Monaco', 'Menlo', monospace; font-size: 14px; color: #666; line-height: 1.6;">
-                                                        ${Object.keys(files).slice(0, 15).map(file => `• ${file}`).join('<br>')}
-                                                        ${Object.keys(files).length > 15 ? `<br>• ... and ${Object.keys(files).length - 15} more files` : ''}
+                                                        \${Object.keys(files).slice(0, 15).map(file => \`• \${file}\`).join('<br>')}
+                                                        \${Object.keys(files).length > 15 ? \`<br>• ... and \${Object.keys(files).length - 15} more files\` : ''}
                                                     </div>
                                                 </div>
                                                 
@@ -551,8 +541,8 @@ const WorkspaceLayout = () => {
                                     <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left;">
                                         <h3 style="color: #333; margin-bottom: 10px;">📁 Files:</h3>
                                         <p style="color: #666; font-family: monospace; font-size: 14px;">
-                                            ${Object.keys(files).slice(0, 10).join(', ')}
-                                            ${Object.keys(files).length > 10 ? '... and more' : ''}
+                                            \${Object.keys(files).slice(0, 10).join(', ')}
+                                            \${Object.keys(files).length > 10 ? '... and more' : ''}
                                         </p>
                                     </div>
                                 </div>
@@ -671,7 +661,7 @@ const WorkspaceLayout = () => {
       const content = files[jsFile].content
       
       // Wrap in try-catch to prevent errors from breaking the entire preview
-      return `<script>
+      return `<script type="text/babel">
         try {
           console.log('Loading: ${jsFile}');
           ${content}
