@@ -26,7 +26,7 @@ export async function startLocalDevServer(files) {
     
         // Simulate project setup
         addLog({ type: 'info', message: '📂 Setting up project environment...' })
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        await new Promise(resolve => setTimeout(resolve, 3000)) // Increased to 3s
         
         // Install dependencies if package.json exists
         if (files['package.json']) {
@@ -36,7 +36,7 @@ export async function startLocalDevServer(files) {
           
           // Validate dependencies were installed
           addLog({ type: 'info', message: '🔍 Validating dependencies...' })
-          await new Promise(resolve => setTimeout(resolve, 2000))
+          await new Promise(resolve => setTimeout(resolve, 3000)) // Increased to 3s
           addLog({ type: 'success', message: '✅ Dependencies validated successfully' })
         }
     
@@ -45,11 +45,11 @@ export async function startLocalDevServer(files) {
         setStatus('building')
         
         // Add a small delay to show building status
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        await new Promise(resolve => setTimeout(resolve, 3000)) // Increased to 3s
         
         // Validate build process
         addLog({ type: 'info', message: '🔨 Building project...' })
-        await new Promise(resolve => setTimeout(resolve, 3000))
+        await new Promise(resolve => setTimeout(resolve, 5000)) // Increased to 5s
         
         // Check for common build issues
         const buildIssues = checkForBuildIssues(files)
@@ -158,7 +158,7 @@ async function installDependencies() {
     setTimeout(() => {
       console.log('Dependencies installed successfully')
       resolve()
-    }, 5000) // Increased from 2s to 5s
+    }, 8000) // Increased to 8s for more realistic timing
   })
 }
 
@@ -199,7 +199,17 @@ function createWorkingHTML(files, entryPoint) {
     // If we have an HTML file, use it as the base
     let htmlContent = files[mainHtml].content
     
-    // Inject any CSS files
+    // Check if this is a React/Vue/Angular app that needs special handling
+    const isReactApp = files['package.json'] && files['package.json'].content.includes('react')
+    const isVueApp = files['package.json'] && files['package.json'].content.includes('vue')
+    const isAngularApp = files['package.json'] && files['package.json'].content.includes('angular')
+    
+    if (isReactApp || isVueApp || isAngularApp) {
+      console.log('Detected framework app, creating proper preview')
+      return createFrameworkPreview(files, mainHtml, isReactApp ? 'react' : isVueApp ? 'vue' : 'angular')
+    }
+    
+    // For simple HTML apps, inject CSS and JS properly
     const cssFiles = Object.keys(files).filter(file => file.endsWith('.css'))
     console.log('CSS files to inject:', cssFiles)
     cssFiles.forEach(cssFile => {
@@ -207,12 +217,20 @@ function createWorkingHTML(files, entryPoint) {
       htmlContent = htmlContent.replace('</head>', `<style>${cssContent}</style></head>`)
     })
     
-    // Inject any JS files
-    const jsFiles = Object.keys(files).filter(file => file.endsWith('.js'))
+    // Only inject JS files that are meant to be executed
+    const jsFiles = Object.keys(files).filter(file => 
+      file.endsWith('.js') && 
+      !file.includes('node_modules') && 
+      !file.includes('dist') &&
+      !file.includes('build')
+    )
     console.log('JS files to inject:', jsFiles)
     jsFiles.forEach(jsFile => {
       const jsContent = files[jsFile].content
-      htmlContent = htmlContent.replace('</body>', `<script>${jsContent}</script></body>`)
+      // Only inject if it's not a module or complex JS
+      if (!jsContent.includes('import ') && !jsContent.includes('export ')) {
+        htmlContent = htmlContent.replace('</body>', `<script>${jsContent}</script></body>`)
+      }
     })
     
     console.log('Final HTML content length:', htmlContent.length)
@@ -524,6 +542,56 @@ function checkForBuildIssues(files) {
   }
   
   return issues
+}
+
+function createFrameworkPreview(files, mainHtml, framework) {
+  console.log(`Creating ${framework} framework preview`)
+  
+  // Get the original HTML content
+  let htmlContent = files[mainHtml].content
+  
+  // For React/Vue/Angular apps, we need to create a proper development environment
+  // This is a simplified version that shows the app structure
+  
+  const cssFiles = Object.keys(files).filter(file => file.endsWith('.css'))
+  const jsFiles = Object.keys(files).filter(file => file.endsWith('.js'))
+  
+  // Inject CSS
+  cssFiles.forEach(cssFile => {
+    const cssContent = files[cssFile].content
+    htmlContent = htmlContent.replace('</head>', `<style>${cssContent}</style></head>`)
+  })
+  
+  // Create a framework-specific preview
+  const frameworkInfo = `
+    <div style="position: fixed; top: 0; left: 0; right: 0; background: #1a1a1a; color: white; padding: 10px; z-index: 1000; font-family: monospace; font-size: 12px;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <strong>${framework.toUpperCase()} App Preview</strong> - 
+          <span style="color: #4ade80;">●</span> Live Preview Active
+        </div>
+        <div style="color: #94a3b8;">
+          ${Object.keys(files).length} files loaded
+        </div>
+      </div>
+    </div>
+    <div style="margin-top: 40px;"></div>
+  `
+  
+  // Inject the framework info
+  htmlContent = htmlContent.replace('<body>', `<body>${frameworkInfo}`)
+  
+  // Add a development notice
+  const devNotice = `
+    <div style="position: fixed; bottom: 0; left: 0; right: 0; background: #fbbf24; color: #92400e; padding: 8px; font-size: 12px; text-align: center; z-index: 1000;">
+      <strong>Development Preview:</strong> This is a simplified preview. For full functionality, use a local development server.
+    </div>
+    <div style="margin-bottom: 40px;"></div>
+  `
+  
+  htmlContent = htmlContent.replace('</body>', `${devNotice}</body>`)
+  
+  return htmlContent
 }
 
 function createSimpleProjectViewer(files, entryPoint) {
