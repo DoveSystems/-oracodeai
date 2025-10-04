@@ -68,11 +68,11 @@ const Workspace = () => {
     addLog({ type: 'info', message: '🚀 Starting project...' })
     setStatus('running')
     
-    // Simulate project startup
+    // Don't set a preview URL - let the ProjectPreview component handle the display
     setTimeout(() => {
       addLog({ type: 'success', message: '✅ Project started successfully!' })
-      setPreviewUrl('http://localhost:3000')
-    }, 3000)
+      addLog({ type: 'info', message: '📄 Project preview is now available' })
+    }, 2000)
   }
 
   const handleBuildProject = async () => {
@@ -82,8 +82,9 @@ const Workspace = () => {
     // Simulate build process
     setTimeout(() => {
       addLog({ type: 'success', message: '✅ Build completed successfully!' })
-      setStatus('idle')
-    }, 5000)
+      addLog({ type: 'info', message: '📦 Project is ready for deployment' })
+      setStatus('running') // Set to running so preview is available
+    }, 3000)
   }
 
   if (!files || Object.keys(files).length === 0) {
