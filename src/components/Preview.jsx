@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAppStore } from '../store/appStore'
-import { ExternalLink, RefreshCw, AlertTriangle, Code, Sparkles, Monitor, Play, Terminal, Globe, Zap, Settings, Download, Upload } from 'lucide-react'
+import { ExternalLink, RefreshCw, AlertTriangle, Code, Sparkles, Monitor, Play, Terminal, Globe, Zap, Settings, Download, Upload, Loader } from 'lucide-react'
 
 const Preview = () => {
   const { previewUrl, status, files, addLog } = useAppStore()
@@ -31,6 +31,7 @@ const Preview = () => {
   }
 
   const handleRunDevServer = () => {
+    const { setPreviewUrl } = useAppStore.getState()
     addLog({ type: 'info', message: '🚀 Starting development server...' })
     
     // Simulate dev server startup

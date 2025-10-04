@@ -64,6 +64,7 @@ const Workspace = () => {
   }, [files, navigate, addLog])
 
   const handleRunProject = async () => {
+    const { setPreviewUrl } = useAppStore.getState()
     addLog({ type: 'info', message: '🚀 Starting project...' })
     setStatus('running')
     
