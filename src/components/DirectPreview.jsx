@@ -162,6 +162,36 @@ const DirectPreview = () => {
   const renderProjectOverview = () => {
     if (!projectInfo) return null
 
+    // Check if there's an HTML file to preview
+    const htmlFiles = Object.keys(files).filter(f => f.endsWith('.html'))
+    const mainHtml = htmlFiles.find(f => f === 'index.html') || htmlFiles[0]
+
+    if (mainHtml && files[mainHtml]) {
+      // Show the actual HTML content in an iframe
+      return (
+        <div className="h-full relative">
+          <iframe
+            srcDoc={files[mainHtml].content}
+            className="w-full h-full border-0"
+            title={`Preview of ${mainHtml}`}
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+          />
+          <div className="absolute top-4 right-4 bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-semibold">
+            🟢 LIVE - {mainHtml}
+          </div>
+          <div className="absolute top-4 left-4 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm">
+            <button 
+              onClick={() => setViewMode('project')}
+              className="hover:underline"
+            >
+              📊 Project Info
+            </button>
+          </div>
+        </div>
+      )
+    }
+
+    // Fallback to project dashboard if no HTML file
     return (
       <div className="h-full bg-gradient-to-br from-blue-50 to-purple-50 p-6 overflow-y-auto">
         <div className="max-w-4xl mx-auto">

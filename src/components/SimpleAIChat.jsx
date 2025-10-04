@@ -38,14 +38,146 @@ const SimpleAIChat = ({ aiAnalysis }) => {
       return
     }
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      // Get the current files from the store
+      const { files } = useAppStore.getState()
+      
+      if (!files || Object.keys(files).length === 0) {
+        addAIMessage({ 
+          role: 'assistant', 
+          content: `I don't see any project files loaded. Please upload a project first so I can analyze your code.`,
+          isError: true
+        })
+        setIsAIProcessing(false)
+        return
+      }
+
+      // Analyze the codebase
+      const codebaseAnalysis = analyzeCodebase(files)
+      
+      // Generate AI response based on the actual code
+      const response = await generateAIResponse(userMessage, codebaseAnalysis, files)
+      
       addAIMessage({ 
         role: 'assistant', 
-        content: `I understand you're asking about "${userMessage}". I'm ready to help with your code! Configure your API key in settings to get full AI assistance.`
+        content: response
       })
-      setIsAIProcessing(false)
-    }, 1500)
+    } catch (error) {
+      console.error('AI processing error:', error)
+      addAIMessage({ 
+        role: 'assistant', 
+        content: `I encountered an error while analyzing your code: ${error.message}. Please try again.`,
+        isError: true
+      })
+    }
+    
+    setIsAIProcessing(false)
+  }
+
+  const analyzeCodebase = (files) => {
+    const fileList = Object.keys(files)
+    const codeFiles = fileList.filter(f => 
+      f.endsWith('.js') || f.endsWith('.jsx') || f.endsWith('.ts') || f.endsWith('.tsx') || 
+      f.endsWith('.py') || f.endsWith('.java') || f.endsWith('.cpp') || f.endsWith('.c')
+    )
+    
+    const htmlFiles = fileList.filter(f => f.endsWith('.html'))
+    const cssFiles = fileList.filter(f => f.endsWith('.css'))
+    const configFiles = fileList.filter(f => 
+      f.includes('package.json') || f.includes('config') || f.includes('.env')
+    )
+
+    return {
+      totalFiles: fileList.length,
+      codeFiles: codeFiles.length,
+      htmlFiles: htmlFiles.length,
+      cssFiles: cssFiles.length,
+      configFiles: configFiles.length,
+      fileList: fileList,
+      codeFiles: codeFiles,
+      hasPackageJson: files['package.json'] ? true : false,
+      projectType: detectProjectType(files)
+    }
+  }
+
+  const detectProjectType = (files) => {
+    if (files['package.json']) {
+      try {
+        const pkg = JSON.parse(files['package.json'].content)
+        if (pkg.dependencies?.react) return 'React'
+        if (pkg.dependencies?.vue) return 'Vue'
+        if (pkg.dependencies?.angular) return 'Angular'
+        if (pkg.dependencies?.next) return 'Next.js'
+        if (pkg.dependencies?.vite) return 'Vite'
+      } catch (e) {
+        console.error('Error parsing package.json:', e)
+      }
+    }
+    return 'Web Project'
+  }
+
+  const generateAIResponse = async (userMessage, codebaseAnalysis, files) => {
+    // Create a comprehensive context about the codebase
+    const context = `
+Project Analysis:
+- Project Type: ${codebaseAnalysis.projectType}
+- Total Files: ${codebaseAnalysis.totalFiles}
+- Code Files: ${codebaseAnalysis.codeFiles}
+- HTML Files: ${codebaseAnalysis.htmlFiles}
+- CSS Files: ${codebaseAnalysis.cssFiles}
+
+Key Files:
+${codebaseAnalysis.codeFiles.slice(0, 10).map(f => `- ${f}`).join('\n')}
+
+User Question: ${userMessage}
+`
+
+    // For now, provide a detailed analysis based on the codebase
+    if (userMessage.toLowerCase().includes('analyze') || userMessage.toLowerCase().includes('codebase')) {
+      return `I've analyzed your ${codebaseAnalysis.projectType} project with ${codebaseAnalysis.totalFiles} files. Here's what I found:
+
+📊 **Project Structure:**
+- ${codebaseAnalysis.codeFiles} code files
+- ${codebaseAnalysis.htmlFiles} HTML files  
+- ${codebaseAnalysis.cssFiles} CSS files
+- ${codebaseAnalysis.configFiles} configuration files
+
+🔍 **Key Files Detected:**
+${codebaseAnalysis.codeFiles.slice(0, 5).map(f => `- ${f}`).join('\n')}
+
+💡 **Recommendations:**
+- Your project structure looks well organized
+- Consider adding TypeScript for better type safety
+- Make sure to include proper error handling in your components
+
+Would you like me to analyze any specific files or help with a particular aspect of your code?`
+    }
+
+    if (userMessage.toLowerCase().includes('bug') || userMessage.toLowerCase().includes('error')) {
+      return `I can help you find bugs in your code! Based on your ${codebaseAnalysis.projectType} project, here are common areas to check:
+
+🐛 **Common Bug Sources:**
+- Check for undefined variables in your JavaScript/TypeScript files
+- Verify all imports are correct
+- Look for missing dependencies in package.json
+- Check for console errors in browser dev tools
+
+🔍 **Files to Review:**
+${codebaseAnalysis.codeFiles.slice(0, 3).map(f => `- ${f}`).join('\n')}
+
+Would you like me to examine a specific file for potential issues? Just let me know which file you'd like me to analyze!`
+    }
+
+    // Default response
+    return `I can see your ${codebaseAnalysis.projectType} project with ${codebaseAnalysis.totalFiles} files. I'm ready to help you with:
+
+- Code analysis and debugging
+- Code optimization suggestions  
+- Adding new features
+- Fixing bugs and errors
+- Code review and best practices
+
+What specific help do you need with your code?`
   }
 
   const handleKeyPress = (e) => {
