@@ -18,7 +18,7 @@ import { useAppStore } from '../store/appStore'
 import FileTree from '../components/FileTree'
 import CodeEditor from '../components/CodeEditor'
 import Preview from '../components/Preview'
-import EnhancedAIChat from '../components/EnhancedAIChat'
+import SuperIntelligentAI from '../components/SuperIntelligentAI'
 import LogsPanel from '../components/LogsPanel'
 import StatusBar from '../components/StatusBar'
 import { startLocalhostServer, stopLocalhostServer } from '../utils/localhostServer'
@@ -271,7 +271,7 @@ const Workspace = () => {
                 </div>
               </div>
                   <div className="flex-1">
-                    <EnhancedAIChat aiAnalysis={aiAnalysis} />
+                    <SuperIntelligentAI aiAnalysis={aiAnalysis} />
                   </div>
             </div>
           </div>
