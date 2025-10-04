@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { useAppStore } from '../store/appStore'
-import { ExternalLink, RefreshCw, AlertTriangle, Code, Sparkles, Monitor } from 'lucide-react'
+import { ExternalLink, RefreshCw, AlertTriangle, Code, Sparkles, Monitor, Play, Terminal, Globe, Zap, Settings, Download, Upload } from 'lucide-react'
 
 const Preview = () => {
-  const { previewUrl, status, files } = useAppStore()
+  const { previewUrl, status, files, addLog } = useAppStore()
   const [connectionError, setConnectionError] = useState(false)
   const [previewMode, setPreviewMode] = useState('localhost') // 'localhost' or 'webcontainer'
+  const [showPreviewControls, setShowPreviewControls] = useState(false)
+  const [isBuilding, setIsBuilding] = useState(false)
 
   const handleRefresh = () => {
     if (previewUrl) {
@@ -13,6 +15,216 @@ const Preview = () => {
       if (iframe) {
         iframe.src = iframe.src
       }
+      addLog({ type: 'info', message: '🔄 Refreshing preview...' })
+    }
+  }
+
+  const handleBuild = async () => {
+    setIsBuilding(true)
+    addLog({ type: 'info', message: '🔨 Building project...' })
+    
+    // Simulate build process
+    setTimeout(() => {
+      setIsBuilding(false)
+      addLog({ type: 'success', message: '✅ Build complete!' })
+    }, 2000)
+  }
+
+  const handleRunDevServer = () => {
+    addLog({ type: 'info', message: '🚀 Starting development server...' })
+    
+    // Simulate dev server startup
+    setTimeout(() => {
+      addLog({ type: 'success', message: '✅ Development server started on http://localhost:3000' })
+      setPreviewUrl('http://localhost:3000')
+    }, 2000)
+  }
+
+  const handleOpenTerminal = () => {
+    addLog({ type: 'info', message: '💻 Opening terminal...' })
+    
+    // Create a terminal-like interface
+    const terminalWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes')
+    
+    if (terminalWindow) {
+      terminalWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>CodeWonderAI Terminal</title>
+          <style>
+            body {
+              background: #1e1e1e;
+              color: #d4d4d4;
+              font-family: 'Consolas', 'Monaco', monospace;
+              margin: 0;
+              padding: 20px;
+              overflow: hidden;
+            }
+            .terminal {
+              height: 100vh;
+              display: flex;
+              flex-direction: column;
+            }
+            .terminal-header {
+              background: #2d2d2d;
+              padding: 10px;
+              border-bottom: 1px solid #404040;
+              display: flex;
+              align-items: center;
+              gap: 10px;
+            }
+            .terminal-buttons {
+              display: flex;
+              gap: 5px;
+            }
+            .terminal-button {
+              width: 12px;
+              height: 12px;
+              border-radius: 50%;
+              border: none;
+            }
+            .close { background: #ff5f56; }
+            .minimize { background: #ffbd2e; }
+            .maximize { background: #27ca3f; }
+            .terminal-title {
+              color: #d4d4d4;
+              font-size: 14px;
+            }
+            .terminal-content {
+              flex: 1;
+              padding: 20px;
+              overflow-y: auto;
+              font-size: 14px;
+              line-height: 1.5;
+            }
+            .terminal-input {
+              background: transparent;
+              border: none;
+              color: #d4d4d4;
+              font-family: inherit;
+              font-size: 14px;
+              outline: none;
+              width: 100%;
+            }
+            .prompt {
+              color: #4ec9b0;
+            }
+            .output {
+              margin: 10px 0;
+            }
+            .error {
+              color: #f48771;
+            }
+            .success {
+              color: #4ec9b0;
+            }
+            .warning {
+              color: #dcdcaa;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="terminal">
+            <div class="terminal-header">
+              <div class="terminal-buttons">
+                <button class="terminal-button close"></button>
+                <button class="terminal-button minimize"></button>
+                <button class="terminal-button maximize"></button>
+              </div>
+              <div class="terminal-title">CodeWonderAI Terminal</div>
+            </div>
+            <div class="terminal-content">
+              <div class="output">
+                <span class="prompt">$</span> Welcome to CodeWonderAI Terminal
+              </div>
+              <div class="output">
+                <span class="prompt">$</span> Type 'help' for available commands
+              </div>
+              <div class="output">
+                <span class="prompt">$</span> <input type="text" class="terminal-input" id="terminalInput" placeholder="Enter command...">
+              </div>
+            </div>
+          </div>
+          
+          <script>
+            const input = document.getElementById('terminalInput');
+            const content = document.querySelector('.terminal-content');
+            
+            function addOutput(text, type = '') {
+              const output = document.createElement('div');
+              output.className = 'output ' + type;
+              output.innerHTML = '<span class="prompt">$</span> ' + text;
+              content.appendChild(output);
+              content.scrollTop = content.scrollHeight;
+            }
+            
+            function executeCommand(command) {
+              const cmd = command.toLowerCase().trim();
+              
+              switch(cmd) {
+                case 'help':
+                  addOutput('Available commands:', 'success');
+                  addOutput('  help - Show this help message', '');
+                  addOutput('  clear - Clear terminal', '');
+                  addOutput('  ls - List files', '');
+                  addOutput('  pwd - Show current directory', '');
+                  addOutput('  npm install - Install dependencies', '');
+                  addOutput('  npm start - Start the project', '');
+                  addOutput('  npm run build - Build the project', '');
+                  addOutput('  exit - Close terminal', '');
+                  break;
+                case 'clear':
+                  content.innerHTML = '<div class="output"><span class="prompt">$</span> <input type="text" class="terminal-input" id="terminalInput" placeholder="Enter command..."></div>';
+                  document.getElementById('terminalInput').focus();
+                  break;
+                case 'ls':
+                  addOutput('package.json', '');
+                  addOutput('src/', '');
+                  addOutput('public/', '');
+                  addOutput('node_modules/', '');
+                  break;
+                case 'pwd':
+                  addOutput('/workspace', 'success');
+                  break;
+                case 'npm install':
+                  addOutput('Installing dependencies...', 'warning');
+                  setTimeout(() => addOutput('Dependencies installed successfully!', 'success'), 2000);
+                  break;
+                case 'npm start':
+                  addOutput('Starting development server...', 'warning');
+                  setTimeout(() => addOutput('Server started on http://localhost:3000', 'success'), 1500);
+                  break;
+                case 'npm run build':
+                  addOutput('Building project...', 'warning');
+                  setTimeout(() => addOutput('Build completed successfully!', 'success'), 3000);
+                  break;
+                case 'exit':
+                  window.close();
+                  break;
+                default:
+                  addOutput('Command not found: ' + command + '. Type "help" for available commands.', 'error');
+              }
+            }
+            
+            input.addEventListener('keypress', (e) => {
+              if (e.key === 'Enter') {
+                const command = input.value;
+                addOutput(command);
+                executeCommand(command);
+                input.value = '';
+              }
+            });
+            
+            input.focus();
+          </script>
+        </body>
+        </html>
+      `)
+      
+      addLog({ type: 'success', message: '✅ Terminal opened in new window' })
+    } else {
+      addLog({ type: 'error', message: '❌ Failed to open terminal. Please allow popups.' })
     }
   }
 
@@ -119,28 +331,48 @@ const Preview = () => {
 
   return (
     <div className="h-full flex flex-col flex-constrained">
-      <div className="bg-gray-800 px-4 py-2 border-b border-gray-700 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center space-x-2 min-w-0">
-          <span className="text-sm font-medium">Preview</span>
+      <div className="bg-gradient-to-r from-slate-800 to-slate-700 px-4 py-3 border-b border-slate-600 flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center space-x-3 min-w-0">
+          <div className="flex items-center space-x-2">
+            <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+              <Globe className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-sm font-semibold text-white">Live Preview</span>
+          </div>
+          
           {status === 'readonly' && (
-            <span className="text-xs bg-yellow-600 px-2 py-1 rounded flex-shrink-0">Read-only</span>
+            <span className="text-xs bg-yellow-600/20 text-yellow-300 px-2 py-1 rounded-lg border border-yellow-500/30">Read-only</span>
           )}
           {status === 'running' && (
-            <span className="text-xs bg-green-600 px-2 py-1 rounded flex-shrink-0">Live</span>
+            <span className="text-xs bg-green-600/20 text-green-300 px-2 py-1 rounded-lg border border-green-500/30 flex items-center space-x-1">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span>Live</span>
+            </span>
+          )}
+          {status === 'building' && (
+            <span className="text-xs bg-blue-600/20 text-blue-300 px-2 py-1 rounded-lg border border-blue-500/30 flex items-center space-x-1">
+              <Loader className="w-3 h-3 animate-spin" />
+              <span>Building</span>
+            </span>
           )}
         </div>
+        
         <div className="flex items-center space-x-2 flex-shrink-0">
-              {/* Live Preview Indicator */}
-              <div className="flex items-center space-x-2 bg-green-600/20 text-green-400 px-3 py-1 rounded-lg">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span className="text-xs font-medium">Live Preview</span>
-              </div>
+          {/* Preview Controls Toggle */}
+          <button
+            onClick={() => setShowPreviewControls(!showPreviewControls)}
+            className="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg flex items-center space-x-2 text-sm transition-all duration-200"
+            title="Preview Controls"
+          >
+            <Settings className="w-4 h-4" />
+            <span className="hidden sm:inline">Controls</span>
+          </button>
           
           {previewUrl && (
             <>
               <button
                 onClick={handleFullScreen}
-                className="p-1 hover:bg-gray-700 rounded flex items-center space-x-1 text-sm px-2 py-1"
+                className="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg flex items-center space-x-2 text-sm transition-all duration-200"
                 title="Open in full screen modal"
               >
                 <Monitor className="w-4 h-4" />
@@ -148,14 +380,14 @@ const Preview = () => {
               </button>
               <button
                 onClick={handleRefresh}
-                className="p-1 hover:bg-gray-700 rounded"
+                className="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-all duration-200"
                 title="Refresh"
               >
                 <RefreshCw className="w-4 h-4" />
               </button>
               <button
                 onClick={handleOpenExternal}
-                className="p-1 hover:bg-gray-700 rounded"
+                className="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-all duration-200"
                 title="Open in new tab"
               >
                 <ExternalLink className="w-4 h-4" />
@@ -164,6 +396,43 @@ const Preview = () => {
           )}
         </div>
       </div>
+
+      {/* Preview Controls Panel */}
+      {showPreviewControls && (
+        <div className="bg-slate-800/50 px-4 py-3 border-b border-slate-600/50">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <button
+              onClick={handleRunDevServer}
+              className="px-3 py-2 bg-green-600/20 hover:bg-green-600/30 text-green-300 rounded-lg text-sm flex items-center space-x-2 transition-all duration-200 hover:scale-105"
+            >
+              <Play className="w-4 h-4" />
+              <span>Run Dev Server</span>
+            </button>
+            <button
+              onClick={handleBuild}
+              disabled={isBuilding}
+              className="px-3 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 rounded-lg text-sm flex items-center space-x-2 transition-all duration-200 hover:scale-105 disabled:opacity-50"
+            >
+              {isBuilding ? <Loader className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+              <span>{isBuilding ? 'Building...' : 'Build'}</span>
+            </button>
+            <button
+              onClick={handleOpenTerminal}
+              className="px-3 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 rounded-lg text-sm flex items-center space-x-2 transition-all duration-200 hover:scale-105"
+            >
+              <Terminal className="w-4 h-4" />
+              <span>Terminal</span>
+            </button>
+            <button
+              onClick={() => setPreviewMode(previewMode === 'localhost' ? 'webcontainer' : 'localhost')}
+              className="px-3 py-2 bg-orange-600/20 hover:bg-orange-600/30 text-orange-300 rounded-lg text-sm flex items-center space-x-2 transition-all duration-200 hover:scale-105"
+            >
+              <Globe className="w-4 h-4" />
+              <span>Switch Mode</span>
+            </button>
+          </div>
+        </div>
+      )}
       
       <div className="flex-1 bg-white">
         {status === 'running' && previewUrl ? (

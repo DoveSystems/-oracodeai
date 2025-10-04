@@ -14,8 +14,8 @@ export async function restartProject() {
     if (Object.keys(files).length > 0) {
       addLog({ type: 'info', message: '🚀 Re-initializing preview with existing files...' })
       
-      // Import the preview function from WorkspaceLayout
-      const { createLivePreview } = await import('../components/WorkspaceLayout')
+      // Import the preview function from previewUtils
+      const { createLivePreview } = await import('./previewUtils')
       
       // Re-run the preview process
       await createLivePreview(files)

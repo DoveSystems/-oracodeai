@@ -1,20 +1,38 @@
-import PreviewZip from './pages/PreviewZip.jsx';
 import React from 'react'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { useAppStore } from './store/appStore'
-import UploadZone from './components/UploadZone'
-import WorkspaceLayout from './components/WorkspaceLayout'
+import HomePage from './pages/HomePage'
+import ProjectUpload from './pages/ProjectUpload'
+import Workspace from './pages/Workspace'
+import Features from './pages/Features'
+import ErrorBoundary from './components/ErrorBoundary'
 
 function App() {
-  const { workspace } = useAppStore()
+  const { files } = useAppStore()
 
   return (
-    <div className="h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white overflow-hidden">
-      {!workspace ? (
-        <UploadZone />
-      ) : (
-        <WorkspaceLayout />
-      )}
-    </div>
+    <ErrorBoundary>
+      <Router>
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/features" element={<Features />} />
+            <Route path="/upload" element={<ProjectUpload />} />
+            <Route 
+              path="/workspace" 
+              element={
+                files && Object.keys(files).length > 0 ? (
+                  <Workspace />
+                ) : (
+                  <Navigate to="/upload" replace />
+                )
+              } 
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
+      </Router>
+    </ErrorBoundary>
   )
 }
 

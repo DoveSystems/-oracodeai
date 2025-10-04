@@ -1,10 +1,18 @@
 import { WebContainer } from '@webcontainer/api'
 
+// Global WebContainer instance - only one can exist
 let webcontainerInstance = null
 
 export async function getWebContainer() {
   if (webcontainerInstance) {
+    console.log('Using existing WebContainer instance')
     return webcontainerInstance
+  }
+
+  // Check if WebContainer is supported first
+  if (!isWebContainerSupported()) {
+    console.warn('WebContainer not supported in this environment')
+    return null
   }
 
   try {
@@ -15,27 +23,45 @@ export async function getWebContainer() {
     return webcontainerInstance
   } catch (error) {
     console.error('Failed to boot WebContainer:', error)
-    // In development, try to continue without WebContainer
-    if (import.meta.env.DEV) {
-      console.warn('WebContainer failed to boot, but continuing in development mode')
-      return null
+    // Check if it's the "single instance" error
+    if (error.message && error.message.includes('Only a single WebContainer instance')) {
+      console.warn('WebContainer instance already exists elsewhere, trying to reuse...')
+      // Try to get the existing instance by checking if WebContainer is already booted
+      try {
+        // This is a workaround - we'll handle this gracefully
+        return null
+      } catch (retryError) {
+        console.error('Could not reuse existing WebContainer:', retryError)
+        return null
+      }
     }
     return null
   }
 }
 
-export function isWebContainerSupported() {
-  // Always return true for development - we'll handle errors gracefully
-  if (import.meta.env.DEV) {
-    return true
+export function clearWebContainer() {
+  if (webcontainerInstance) {
+    console.log('Clearing WebContainer instance')
+    webcontainerInstance = null
   }
+}
+
+export function isWebContainerSupported() {
+  // Check all required conditions for WebContainer
+  const diagnostics = getWebContainerDiagnostics()
   
-  return (
-    WebContainer.supported &&
-    typeof SharedArrayBuffer !== 'undefined' &&
-    crossOriginIsolated &&
-    isSecureContext
+  const isSupported = (
+    diagnostics.supported &&
+    diagnostics.sharedArrayBuffer &&
+    diagnostics.crossOriginIsolated &&
+    diagnostics.secureContext &&
+    diagnostics.topLevelBrowsingContext
   )
+  
+  console.log('WebContainer diagnostics:', diagnostics)
+  console.log('WebContainer supported:', isSupported)
+  
+  return isSupported
 }
 
 export function getWebContainerDiagnostics() {

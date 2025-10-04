@@ -1,19 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { 
-  Send, Bot, User, Settings, X, Loader, AlertTriangle, Key, CheckCircle, XCircle, 
-  FileText, Eye, Code, Brain, ExternalLink, Github, Globe, Zap, Sparkles, Wand2, 
-  FileCode, Layers, GitBranch, Terminal, Play, Download, Upload, RefreshCw, Copy, 
-  Check, MessageSquare, ThumbsUp, ThumbsDown, Star, Heart, Smile, Lightbulb,
-  ArrowRight, ArrowDown, ChevronDown, ChevronUp, Mic, MicOff, Volume2, VolumeX, Shield
+  Send, Bot, User, Settings, Loader, AlertTriangle, CheckCircle, 
+  FileText, Code, Brain, Globe, Zap, Sparkles, Wand2, 
+  FileCode, Terminal, Play, Copy, Check, ThumbsUp, ThumbsDown,
+  Mic, MicOff, Volume2, VolumeX, Shield, Lightbulb, Star,
+  ArrowRight, ChevronDown, ChevronUp, MessageSquare, Heart
 } from 'lucide-react'
 import { useAppStore } from '../store/appStore'
 import { callAI, AI_PROVIDERS } from '../utils/aiProviders'
 import { analyzeCodebase, generateAdvancedSystemPrompt, getRelevantFiles } from '../utils/codeAnalyzer'
-import { parseAIResponse, createChangesSummary, streamApplyChanges } from '../utils/codeProcessor'
-import { deployToNetlify, deployToVercel, deployToGitHub, validateNetlifyKey, validateVercelToken, validateGitHubToken } from '../utils/deployment'
-import { cn } from '../utils/cn'
+import TypingAnimation from './TypingAnimation'
 
-const AIChat = ({ aiAnalysis }) => {
+const InteractiveAIChat = ({ aiAnalysis }) => {
   const {
     files,
     aiMessages,
@@ -22,27 +20,11 @@ const AIChat = ({ aiAnalysis }) => {
     selectedProvider,
     addAIMessage,
     setIsAIProcessing,
-    setApiKey,
-    setSelectedProvider,
     addLog,
-    activeFile,
-    setActiveFile,
   } = useAppStore()
 
   const [input, setInput] = useState('')
-  const [showSettings, setShowSettings] = useState(false)
-  const [showDeployment, setShowDeployment] = useState(false)
-  const [pendingChanges, setPendingChanges] = useState(null)
-  const [isApplyingChanges, setIsApplyingChanges] = useState(false)
-  const [deploymentTokens, setDeploymentTokens] = useState({
-    vercel: '',
-    netlify: '',
-    github: ''
-  })
-  const [showQuickActions, setShowQuickActions] = useState(false)
-  const [copiedText, setCopiedText] = useState('')
-  const [isTyping, setIsTyping] = useState(false)
-  const [typingText, setTypingText] = useState('')
+  const [showQuickActions, setShowQuickActions] = useState(true)
   const [isListening, setIsListening] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -50,11 +32,15 @@ const AIChat = ({ aiAnalysis }) => {
   const [messageReactions, setMessageReactions] = useState({})
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamingText, setStreamingText] = useState('')
+  const [typingSpeed, setTypingSpeed] = useState(30)
+  const [showCodePreview, setShowCodePreview] = useState(false)
+  const [previewCode, setPreviewCode] = useState('')
   
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
   const recognitionRef = useRef(null)
   const synthRef = useRef(null)
+  const [isTyping, setIsTyping] = useState(false)
 
   // Initialize speech recognition and synthesis
   useEffect(() => {
@@ -89,34 +75,10 @@ const AIChat = ({ aiAnalysis }) => {
     inputRef.current?.focus()
   }, [])
 
-  // Typing indicator animation
-  useEffect(() => {
-    if (isTyping) {
-      const typingMessages = [
-        "AI is thinking...",
-        "Analyzing your codebase...",
-        "Generating response...",
-        "Processing your request...",
-        "Almost ready..."
-      ]
-      
-      let messageIndex = 0
-      const interval = setInterval(() => {
-        setTypingText(typingMessages[messageIndex])
-        messageIndex = (messageIndex + 1) % typingMessages.length
-      }, 1000)
-
-      return () => clearInterval(interval)
-    }
-  }, [isTyping])
-
   // Auto-suggestions based on input
   useEffect(() => {
     if (input.length > 2) {
       setShowSuggestions(true)
-      // Generate suggestions based on input
-      const suggestions = generateSuggestions(input)
-      setCurrentSuggestion(0)
     } else {
       setShowSuggestions(false)
     }
@@ -131,16 +93,16 @@ const AIChat = ({ aiAnalysis }) => {
       "What are potential bugs here?",
       "Can you refactor this code?",
       "How can I add error handling?",
-      "What are the security considerations?"
+      "What are the security considerations?",
+      "Show me a better implementation",
+      "How can I make this more maintainable?"
     ]
     
     return suggestions.filter(s => 
       s.toLowerCase().includes(text.toLowerCase()) || 
       text.toLowerCase().includes(s.toLowerCase().split(' ')[0])
-    ).slice(0, 3)
+    ).slice(0, 4)
   }
-
-  const needsApiKey = !apiKeys[selectedProvider]
 
   const handleSend = async () => {
     if (!input.trim() || isAIProcessing) return
@@ -176,12 +138,12 @@ const AIChat = ({ aiAnalysis }) => {
       // Simulate streaming response
       const response = await callAI(messages, selectedProvider, apiKeys[selectedProvider])
       
-      // Stream the response
+      // Stream the response with typing animation
       let fullResponse = ''
       const words = response.split(' ')
       
       for (let i = 0; i < words.length; i++) {
-        await new Promise(resolve => setTimeout(resolve, 50))
+        await new Promise(resolve => setTimeout(resolve, typingSpeed))
         fullResponse += (i > 0 ? ' ' : '') + words[i]
         setStreamingText(fullResponse)
       }
@@ -191,7 +153,8 @@ const AIChat = ({ aiAnalysis }) => {
         content: fullResponse,
         timestamp: Date.now(),
         reactions: [],
-        suggestions: generateResponseSuggestions(fullResponse)
+        suggestions: generateResponseSuggestions(fullResponse),
+        codeBlocks: extractCodeBlocks(fullResponse)
       }
 
       addAIMessage(aiMessage)
@@ -221,6 +184,21 @@ const AIChat = ({ aiAnalysis }) => {
     }
   }
 
+  const extractCodeBlocks = (text) => {
+    const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g
+    const matches = []
+    let match
+    
+    while ((match = codeBlockRegex.exec(text)) !== null) {
+      matches.push({
+        language: match[1] || 'javascript',
+        code: match[2].trim()
+      })
+    }
+    
+    return matches
+  }
+
   const generateResponseSuggestions = (response) => {
     const suggestions = []
     
@@ -233,8 +211,11 @@ const AIChat = ({ aiAnalysis }) => {
     if (response.includes('optimize') || response.includes('performance')) {
       suggestions.push("Show me the optimized version", "What are the benefits?")
     }
+    if (response.includes('test')) {
+      suggestions.push("Write a test for this", "How can I test this?")
+    }
     
-    return suggestions.slice(0, 2)
+    return suggestions.slice(0, 3)
   }
 
   const handleQuickAction = (action) => {
@@ -279,22 +260,21 @@ const AIChat = ({ aiAnalysis }) => {
   const copyToClipboard = async (text) => {
     try {
       await navigator.clipboard.writeText(text)
-      setCopiedText(text)
-      setTimeout(() => setCopiedText(''), 2000)
+      setTimeout(() => {}, 2000)
     } catch (err) {
       console.error('Failed to copy:', err)
     }
   }
 
   const quickActions = [
-    { id: 'optimize', label: 'Optimize Code', icon: Zap, color: 'text-yellow-400' },
-    { id: 'debug', label: 'Debug Issues', icon: AlertTriangle, color: 'text-red-400' },
-    { id: 'refactor', label: 'Refactor', icon: RefreshCw, color: 'text-blue-400' },
-    { id: 'explain', label: 'Explain Code', icon: FileText, color: 'text-green-400' },
-    { id: 'test', label: 'Write Tests', icon: CheckCircle, color: 'text-purple-400' },
-    { id: 'document', label: 'Add Docs', icon: FileCode, color: 'text-orange-400' },
-    { id: 'security', label: 'Security Check', icon: Shield, color: 'text-pink-400' },
-    { id: 'deploy', label: 'Deploy Help', icon: Globe, color: 'text-cyan-400' }
+    { id: 'optimize', label: 'Optimize', icon: Zap, color: 'text-yellow-400', bg: 'bg-yellow-500/20' },
+    { id: 'debug', label: 'Debug', icon: AlertTriangle, color: 'text-red-400', bg: 'bg-red-500/20' },
+    { id: 'refactor', label: 'Refactor', icon: RefreshCw, color: 'text-blue-400', bg: 'bg-blue-500/20' },
+    { id: 'explain', label: 'Explain', icon: FileText, color: 'text-green-400', bg: 'bg-green-500/20' },
+    { id: 'test', label: 'Test', icon: CheckCircle, color: 'text-purple-400', bg: 'bg-purple-500/20' },
+    { id: 'document', label: 'Docs', icon: FileCode, color: 'text-orange-400', bg: 'bg-orange-500/20' },
+    { id: 'security', label: 'Security', icon: Shield, color: 'text-pink-400', bg: 'bg-pink-500/20' },
+    { id: 'deploy', label: 'Deploy', icon: Globe, color: 'text-cyan-400', bg: 'bg-cyan-500/20' }
   ]
 
   return (
@@ -303,8 +283,8 @@ const AIChat = ({ aiAnalysis }) => {
       <div className="p-4 border-b border-slate-700 bg-slate-800/50 backdrop-blur-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-              <Brain className="w-4 h-4 text-white" />
+            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center">
+              <Brain className="w-5 h-5 text-white" />
             </div>
             <div>
               <h3 className="text-lg font-semibold text-white">AI Assistant</h3>
@@ -320,15 +300,19 @@ const AIChat = ({ aiAnalysis }) => {
           <div className="flex items-center space-x-2">
             <button
               onClick={() => setShowQuickActions(!showQuickActions)}
-              className="p-2 text-slate-400 hover:text-white transition-colors"
+              className={`p-2 rounded-lg transition-all ${
+                showQuickActions 
+                  ? 'bg-purple-600 text-white' 
+                  : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+              }`}
             >
               <Wand2 className="w-4 h-4" />
             </button>
             <button
-              onClick={() => setShowSettings(!showSettings)}
-              className="p-2 text-slate-400 hover:text-white transition-colors"
+              onClick={() => setShowSuggestions(!showSuggestions)}
+              className="p-2 bg-slate-700 text-slate-400 hover:bg-slate-600 rounded-lg transition-colors"
             >
-              <Settings className="w-4 h-4" />
+              <Lightbulb className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -337,15 +321,15 @@ const AIChat = ({ aiAnalysis }) => {
       {/* Quick Actions Panel */}
       {showQuickActions && (
         <div className="p-4 border-b border-slate-700 bg-slate-800/30">
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-4 gap-3">
             {quickActions.map((action) => (
               <button
                 key={action.id}
                 onClick={() => handleQuickAction(action.id)}
-                className="flex flex-col items-center space-y-1 p-3 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
+                className={`flex flex-col items-center space-y-2 p-3 rounded-xl transition-all hover:scale-105 ${action.bg} hover:bg-opacity-30`}
               >
-                <action.icon className={`w-4 h-4 ${action.color}`} />
-                <span className="text-xs text-slate-300">{action.label}</span>
+                <action.icon className={`w-5 h-5 ${action.color}`} />
+                <span className="text-xs font-medium text-slate-300">{action.label}</span>
               </button>
             ))}
           </div>
@@ -355,20 +339,23 @@ const AIChat = ({ aiAnalysis }) => {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {aiMessages.length === 0 && (
-          <div className="text-center py-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Sparkles className="w-8 h-8 text-white" />
+          <div className="text-center py-12">
+            <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-3xl flex items-center justify-center mx-auto mb-6">
+              <Sparkles className="w-10 h-10 text-white" />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">Welcome to AI Assistant!</h3>
-            <p className="text-slate-400 mb-4">I've analyzed your codebase and I'm ready to help you code better.</p>
-            <div className="flex flex-wrap justify-center gap-2">
+            <h3 className="text-xl font-semibold text-white mb-3">Welcome to AI Assistant!</h3>
+            <p className="text-slate-400 mb-6 max-w-md mx-auto">
+              I've analyzed your codebase and I'm ready to help you code better. 
+              Ask me anything about your project!
+            </p>
+            <div className="flex flex-wrap justify-center gap-3">
               {quickActions.slice(0, 4).map((action) => (
                 <button
                   key={action.id}
                   onClick={() => handleQuickAction(action.id)}
-                  className="flex items-center space-x-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm text-slate-300 transition-colors"
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:scale-105 ${action.bg} ${action.color}`}
                 >
-                  <action.icon className={`w-3 h-3 ${action.color}`} />
+                  <action.icon className="w-4 h-4" />
                   <span>{action.label}</span>
                 </button>
               ))}
@@ -378,7 +365,7 @@ const AIChat = ({ aiAnalysis }) => {
 
         {aiMessages.map((message, index) => (
           <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[80%] ${message.role === 'user' ? 'order-2' : 'order-1'}`}>
+            <div className={`max-w-[85%] ${message.role === 'user' ? 'order-2' : 'order-1'}`}>
               <div className={`flex items-start space-x-3 ${message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                   message.role === 'user' 
@@ -401,13 +388,36 @@ const AIChat = ({ aiAnalysis }) => {
                     ))}
                   </div>
                   
+                  {/* Code Blocks */}
+                  {message.codeBlocks && message.codeBlocks.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {message.codeBlocks.map((block, i) => (
+                        <div key={i} className="bg-slate-800 rounded-lg p-3 border border-slate-600">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs text-slate-400">{block.language}</span>
+                            <button
+                              onClick={() => copyToClipboard(block.code)}
+                              className="p-1 hover:bg-slate-700 rounded transition-colors"
+                            >
+                              <Copy className="w-3 h-3 text-slate-400" />
+                            </button>
+                          </div>
+                          <pre className="text-sm text-slate-200 overflow-x-auto">
+                            <code>{block.code}</code>
+                          </pre>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Suggestions */}
                   {message.suggestions && message.suggestions.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {message.suggestions.map((suggestion, i) => (
                         <button
                           key={i}
                           onClick={() => setInput(suggestion)}
-                          className="text-xs px-2 py-1 bg-slate-600 hover:bg-slate-500 rounded text-slate-300 transition-colors"
+                          className="text-xs px-3 py-1 bg-slate-600 hover:bg-slate-500 rounded-full text-slate-300 transition-colors"
                         >
                           {suggestion}
                         </button>
@@ -433,11 +443,7 @@ const AIChat = ({ aiAnalysis }) => {
                         onClick={() => copyToClipboard(message.content)}
                         className="p-1 hover:bg-slate-600 rounded transition-colors"
                       >
-                        {copiedText === message.content ? (
-                          <Check className="w-3 h-3 text-green-400" />
-                        ) : (
-                          <Copy className="w-3 h-3 text-slate-400" />
-                        )}
+                        <Copy className="w-3 h-3 text-slate-400" />
                       </button>
                     </div>
                     <span className="text-xs text-slate-500">
@@ -460,7 +466,7 @@ const AIChat = ({ aiAnalysis }) => {
               <div className="bg-slate-700 rounded-2xl px-4 py-3">
                 <div className="flex items-center space-x-2">
                   <Loader className="w-4 h-4 text-purple-400 animate-spin" />
-                  <span className="text-slate-300">{typingText}</span>
+                  <span className="text-slate-300">AI is thinking...</span>
                 </div>
               </div>
             </div>
@@ -476,10 +482,7 @@ const AIChat = ({ aiAnalysis }) => {
               </div>
               <div className="bg-slate-700 rounded-2xl px-4 py-3">
                 <div className="prose prose-invert max-w-none">
-                  {streamingText.split('\n').map((line, i) => (
-                    <p key={i} className="mb-2 last:mb-0">{line}</p>
-                  ))}
-                  <span className="animate-pulse">|</span>
+                  <TypingAnimation text={streamingText} speed={typingSpeed} />
                 </div>
               </div>
             </div>
@@ -492,7 +495,7 @@ const AIChat = ({ aiAnalysis }) => {
       {/* Input Area */}
       <div className="p-4 border-t border-slate-700 bg-slate-800/50">
         {/* Suggestions */}
-        {showSuggestions && (
+        {showSuggestions && input.length > 2 && (
           <div className="mb-3 space-y-1">
             {generateSuggestions(input).map((suggestion, index) => (
               <button
@@ -530,7 +533,7 @@ const AIChat = ({ aiAnalysis }) => {
               onClick={handleVoiceInput}
               className={`p-2 rounded-lg transition-colors ${
                 isListening 
-                  ? 'bg-red-600 text-white' 
+                  ? 'bg-red-600 text-white animate-pulse' 
                   : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
               }`}
             >
@@ -566,4 +569,4 @@ const AIChat = ({ aiAnalysis }) => {
   )
 }
 
-export default AIChat
+export default InteractiveAIChat
