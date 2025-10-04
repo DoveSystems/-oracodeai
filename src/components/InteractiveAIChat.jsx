@@ -126,7 +126,7 @@ const InteractiveAIChat = ({ aiAnalysis }) => {
       const relevantFiles = getRelevantFiles(files, input)
       
       // Generate system prompt with context
-      const systemPrompt = generateAdvancedSystemPrompt(codebaseAnalysis, relevantFiles, files)
+      const systemPrompt = generateAdvancedSystemPrompt(codebaseAnalysis, files)
       
       // Prepare messages with context
       const messages = [
@@ -136,7 +136,7 @@ const InteractiveAIChat = ({ aiAnalysis }) => {
       ]
 
       // Simulate streaming response
-      const response = await callAI(messages, selectedProvider, apiKeys[selectedProvider])
+      const response = await callAI(selectedProvider, messages, apiKeys[selectedProvider])
       
       // Stream the response with typing animation
       let fullResponse = ''
