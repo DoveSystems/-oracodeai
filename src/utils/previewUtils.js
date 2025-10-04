@@ -1,4 +1,4 @@
-import { getWebContainer } from './webcontainer'
+import { getWebContainer } from './webcontainer.js'
 
 export const createLivePreview = async (files) => {
   try {

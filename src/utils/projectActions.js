@@ -1,6 +1,6 @@
 import JSZip from 'jszip'
 import { useAppStore } from '../store/appStore'
-import { initializeWebContainer } from './webcontainer'
+import { getWebContainer } from './webcontainer.js'
 
 export async function restartProject() {
   const { addLog, clearLogs, files, setStatus } = useAppStore.getState()

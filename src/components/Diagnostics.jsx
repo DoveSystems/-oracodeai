@@ -1,6 +1,6 @@
 import React from 'react'
 import { CheckCircle, XCircle, AlertTriangle, Info, ExternalLink, Copy, Check } from 'lucide-react'
-import { getWebContainerDiagnostics } from '../utils/webcontainer'
+import { getWebContainerDiagnostics } from '../utils/webcontainer.js'
 
 const Diagnostics = () => {
   const [copied, setCopied] = React.useState(false)
