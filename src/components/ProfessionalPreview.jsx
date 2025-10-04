@@ -366,7 +366,7 @@ const ProfessionalPreview = () => {
   }
 
   const generateProfessionalHTML = () => {
-    const { projectInfo } = this.state || {}
+    // Use the projectInfo state directly
     
     // Find the main HTML file
     const mainHtml = files['index.html'] || 
@@ -425,7 +425,7 @@ const ProfessionalPreview = () => {
           // Add professional status overlay
           const overlay = document.createElement('div');
           overlay.className = 'professional-overlay';
-          overlay.innerHTML = '<span class="status">🟢 PROFESSIONAL LIVE</span> - Full-Stack Preview<br><span class="framework">${projectInfo?.framework || 'Web'} App</span><br><span class="metrics">${projectInfo?.totalFiles || 0} files • ${projectInfo?.dependencies?.length || 0} deps</span>';
+          overlay.innerHTML = \`<span class="status">🟢 PROFESSIONAL LIVE</span> - Full-Stack Preview<br><span class="framework">\${projectInfo?.framework || 'Web'} App</span><br><span class="metrics">\${projectInfo?.totalFiles || 0} files • \${projectInfo?.dependencies?.length || 0} deps</span>\`;
           document.body.appendChild(overlay);
           
           // Professional error handling
@@ -445,7 +445,7 @@ const ProfessionalPreview = () => {
   }
 
   const generateProfessionalPreview = () => {
-    const projectInfo = projectInfo
+    // Use the projectInfo state directly
     
     return `
 <!DOCTYPE html>
@@ -618,71 +618,71 @@ const ProfessionalPreview = () => {
             <div class="info-grid">
                 <div class="info-item">
                     <div class="info-label">Project Type</div>
-                    <div class="info-value">${projectInfo?.type || 'Full-Stack'}</div>
+                    <div class="info-value">\${projectInfo?.type || 'Full-Stack'}</div>
                 </div>
                 <div class="info-item">
                     <div class="info-label">Framework</div>
-                    <div class="info-value">${projectInfo?.framework || 'Web'}</div>
+                    <div class="info-value">\${projectInfo?.framework || 'Web'}</div>
                 </div>
                 <div class="info-item">
                     <div class="info-label">Build Tool</div>
-                    <div class="info-value">${projectInfo?.buildTool || 'Custom'}</div>
+                    <div class="info-value">\${projectInfo?.buildTool || 'Custom'}</div>
                 </div>
                 <div class="info-item">
                     <div class="info-label">Architecture</div>
-                    <div class="info-value">${projectInfo?.architecture || 'Monolithic'}</div>
+                    <div class="info-value">\${projectInfo?.architecture || 'Monolithic'}</div>
                 </div>
                 <div class="info-item">
                     <div class="info-label">Total Files</div>
-                    <div class="info-value">${projectInfo?.totalFiles || 0}</div>
+                    <div class="info-value">\${projectInfo?.totalFiles || 0}</div>
                 </div>
                 <div class="info-item">
                     <div class="info-label">Code Files</div>
-                    <div class="info-value">${projectInfo?.codeFiles || 0}</div>
+                    <div class="info-value">\${projectInfo?.codeFiles || 0}</div>
                 </div>
                 <div class="info-item">
                     <div class="info-label">Dependencies</div>
-                    <div class="info-value">${projectInfo?.dependencies?.length || 0}</div>
+                    <div class="info-value">\${projectInfo?.dependencies?.length || 0}</div>
                 </div>
                 <div class="info-item">
                     <div class="info-label">Complexity</div>
-                    <div class="info-value">${projectInfo?.complexity || 'Low'}</div>
+                    <div class="info-value">\${projectInfo?.complexity || 'Low'}</div>
                 </div>
             </div>
             
             <div class="metrics-grid">
                 <div class="metric-item">
-                    <div class="metric-value">${projectInfo?.performance || 'Good'}</div>
+                    <div class="metric-value">\${projectInfo?.performance || 'Good'}</div>
                     <div class="metric-label">Performance</div>
                 </div>
                 <div class="metric-item">
-                    <div class="metric-value">${projectInfo?.security || 'Basic'}</div>
+                    <div class="metric-value">\${projectInfo?.security || 'Basic'}</div>
                     <div class="metric-label">Security</div>
                 </div>
                 <div class="metric-item">
-                    <div class="metric-value">${projectInfo?.scalability || 'Limited'}</div>
+                    <div class="metric-value">\${projectInfo?.scalability || 'Limited'}</div>
                     <div class="metric-label">Scalability</div>
                 </div>
                 <div class="metric-item">
-                    <div class="metric-value">${projectInfo?.maintainability || 'Good'}</div>
+                    <div class="metric-value">\${projectInfo?.maintainability || 'Good'}</div>
                     <div class="metric-label">Maintainability</div>
                 </div>
                 <div class="metric-item">
-                    <div class="metric-value">${projectInfo?.testability || 'Basic'}</div>
+                    <div class="metric-value">\${projectInfo?.testability || 'Basic'}</div>
                     <div class="metric-label">Testability</div>
                 </div>
             </div>
             
-            ${projectInfo?.dependencies?.length > 0 ? `
+            \${projectInfo?.dependencies?.length > 0 ? \`
             <div class="dependencies">
                 <h4>📦 Dependencies</h4>
-                ${projectInfo.dependencies.map(dep => `<span class="dependency-tag">${dep}</span>`).join('')}
+                \${projectInfo.dependencies.map(dep => \`<span class="dependency-tag">\${dep}</span>\`).join('')}
             </div>
-            ` : ''}
+            \` : ''}
             
             <div class="file-tree">
                 <h4>📁 Project Structure</h4>
-                ${generateFileTree()}
+                \${generateFileTree()}
             </div>
         </div>
         
