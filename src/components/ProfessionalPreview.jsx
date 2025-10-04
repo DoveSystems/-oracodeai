@@ -445,7 +445,7 @@ const ProfessionalPreview = () => {
   }
 
   const generateProfessionalPreview = () => {
-    const { projectInfo } = this.state || {}
+    const projectInfo = projectInfo
     
     return `
 <!DOCTYPE html>
