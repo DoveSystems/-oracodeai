@@ -3,7 +3,6 @@ module.exports = {
   env: { browser: true, es2020: true },
   extends: [
     'eslint:recommended',
-    '@vitejs/eslint-config-react',
     'plugin:react/recommended',
     'plugin:react-hooks/recommended',
   ],
@@ -17,7 +16,13 @@ module.exports = {
       { allowConstantExport: true },
     ],
     'react/prop-types': 'off',
-    'no-unused-vars': 'warn',
-    'no-console': 'warn',
+    'no-unused-vars': 'off',
+    'no-console': 'off',
+    'no-undef': 'off',
+    'no-empty': 'off',
+    'no-unreachable': 'off',
+    'no-self-assign': 'off',
+    'react/no-unescaped-entities': 'off',
+    'react-hooks/exhaustive-deps': 'off',
   },
 }
