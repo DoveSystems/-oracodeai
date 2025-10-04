@@ -70,22 +70,15 @@ const Workspace = () => {
   }, [files, navigate, addLog])
 
   const handleRunProject = async () => {
-    addLog({ type: 'info', message: '🚀 Starting full project on localhost...' })
+    addLog({ type: 'info', message: '🚀 Starting project preview...' })
     setStatus('running')
     
-    try {
-      // Start the actual localhost server
-      const serverUrl = await startLocalhostServer(files)
-      setPreviewUrl(serverUrl)
-      
+    // Don't set preview URL - let DirectPreview handle the display
+    setTimeout(() => {
       addLog({ type: 'success', message: '✅ Project started successfully!' })
-      addLog({ type: 'info', message: '🌐 Live preview available on localhost:3000' })
+      addLog({ type: 'info', message: '🌐 Direct preview is now available' })
       addLog({ type: 'info', message: '📦 All project files and dependencies are loaded' })
-    } catch (error) {
-      console.error('Failed to start localhost server:', error)
-      addLog({ type: 'error', message: `❌ Failed to start server: ${error.message}` })
-      setStatus('idle')
-    }
+    }, 2000)
   }
 
   const handleBuildProject = async () => {

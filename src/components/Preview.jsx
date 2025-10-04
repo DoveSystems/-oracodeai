@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAppStore } from '../store/appStore'
 import { ExternalLink, RefreshCw, AlertTriangle, Code, Sparkles, Monitor, Play, Terminal, Globe, Zap, Settings, Download, Upload, Loader } from 'lucide-react'
-import FullProjectPreview from './FullProjectPreview'
+import DirectPreview from './DirectPreview'
 
 const Preview = () => {
   const { previewUrl, status, files, addLog } = useAppStore()
@@ -519,7 +519,7 @@ const Preview = () => {
             </div>
           </div>
         ) : status === 'running' && !previewUrl ? (
-          <FullProjectPreview />
+          <DirectPreview />
         ) : status === 'readonly' ? (
           <div className="h-full flex items-center justify-center text-gray-500 bg-gradient-to-br from-gray-50 to-gray-100">
             <div className="text-center max-w-lg p-8">
