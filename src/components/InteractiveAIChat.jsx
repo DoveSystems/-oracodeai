@@ -4,7 +4,8 @@ import {
   FileText, Code, Brain, Globe, Zap, Sparkles, Wand2, 
   FileCode, Terminal, Play, Copy, Check, ThumbsUp, ThumbsDown,
   Mic, MicOff, Volume2, VolumeX, Shield, Lightbulb, Star,
-  ArrowRight, ChevronDown, ChevronUp, MessageSquare, Heart
+  ArrowRight, ChevronDown, ChevronUp, MessageSquare, Heart,
+  RefreshCw
 } from 'lucide-react'
 import { useAppStore } from '../store/appStore'
 import { callAI, AI_PROVIDERS } from '../utils/aiProviders'
