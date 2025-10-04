@@ -14,6 +14,7 @@ import {
   CheckCircle,
   Loader
 } from 'lucide-react'
+import { startLocalhostServer, stopLocalhostServer, getServerStatus } from '../utils/localhostServer'
 
 const FullProjectPreview = () => {
   const { files, addLog, setStatus } = useAppStore()
@@ -134,27 +135,39 @@ const FullProjectPreview = () => {
     setBuildStatus('running')
     addLog({ type: 'info', message: '🚀 Starting development server...' })
 
-    // Simulate server startup
-    const serverSteps = [
-      'Initializing development server...',
-      'Loading project files...',
-      'Setting up hot reload...',
-      'Starting server on port 3000...',
-      'Server ready!'
-    ]
+    try {
+      // Start the actual localhost server
+      const serverSteps = [
+        'Initializing development server...',
+        'Loading project files...',
+        'Setting up hot reload...',
+        'Starting server on port 3000...',
+        'Server ready!'
+      ]
 
-    for (let i = 0; i < serverSteps.length; i++) {
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      addLog({ type: 'info', message: `🚀 ${serverSteps[i]}` })
+      for (let i = 0; i < serverSteps.length; i++) {
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        addLog({ type: 'info', message: `🚀 ${serverSteps[i]}` })
+      }
+
+      // Start the real localhost server
+      const serverUrl = await startLocalhostServer(files)
+      setPreviewUrl(serverUrl)
+      
+      addLog({ type: 'success', message: '✅ Development server started! Preview is now available.' })
+      addLog({ type: 'info', message: '🌐 Server running on localhost:3000' })
+    } catch (error) {
+      console.error('Failed to start server:', error)
+      addLog({ type: 'error', message: `❌ Failed to start server: ${error.message}` })
+      setIsRunning(false)
+      setBuildStatus('idle')
     }
-
-    // Create a preview URL that shows the actual project
-    const previewUrl = createProjectPreview()
-    setPreviewUrl(previewUrl)
-    addLog({ type: 'success', message: '✅ Development server started! Preview is now available.' })
   }
 
   const handleStopProject = () => {
+    // Stop the actual localhost server
+    stopLocalhostServer()
+    
     setIsRunning(false)
     setBuildStatus('idle')
     setPreviewUrl(null)
@@ -483,10 +496,20 @@ const FullProjectPreview = () => {
             <iframe
               src={previewUrl}
               className="w-full h-full border-0"
-              title="Full Project Preview"
+              title="Live Project Preview - localhost:3000"
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
             />
-            <div className="absolute top-4 right-4 bg-black/80 text-white px-3 py-2 rounded-lg text-sm">
-              🚀 Live Preview Active
+            <div className="absolute top-4 right-4 bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-semibold">
+              🟢 LIVE - localhost:3000
+            </div>
+            <div className="absolute top-4 left-4 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm">
+              <ExternalLink className="w-4 h-4 inline mr-1" />
+              <button 
+                onClick={() => window.open(previewUrl, '_blank')}
+                className="hover:underline"
+              >
+                Open in New Tab
+              </button>
             </div>
           </div>
         ) : (
