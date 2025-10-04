@@ -18,7 +18,7 @@ import { useAppStore } from '../store/appStore'
 import FileTree from '../components/FileTree'
 import CodeEditor from '../components/CodeEditor'
 import Preview from '../components/Preview'
-import InteractiveAIChat from '../components/InteractiveAIChat'
+import SimpleAIChat from '../components/SimpleAIChat'
 import LogsPanel from '../components/LogsPanel'
 import StatusBar from '../components/StatusBar'
 
@@ -173,6 +173,13 @@ const Workspace = () => {
                 <Terminal className="w-4 h-4" />
                 <span>Logs</span>
               </button>
+              <button
+                onClick={() => navigate('/settings')}
+                className="flex items-center space-x-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors"
+              >
+                <Settings className="w-4 h-4" />
+                <span>Settings</span>
+              </button>
             </div>
           </div>
         </div>
@@ -255,9 +262,9 @@ const Workspace = () => {
                   )}
                 </div>
               </div>
-              <div className="flex-1">
-                <InteractiveAIChat aiAnalysis={aiAnalysis} />
-              </div>
+                  <div className="flex-1">
+                    <SimpleAIChat aiAnalysis={aiAnalysis} />
+                  </div>
             </div>
           </div>
         )}

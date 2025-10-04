@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage'
 import ProjectUpload from './pages/ProjectUpload'
 import Workspace from './pages/Workspace'
 import Features from './pages/Features'
+import Settings from './pages/Settings'
 import ErrorBoundary from './components/ErrorBoundary'
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/features" element={<Features />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="/upload" element={<ProjectUpload />} />
             <Route 
               path="/workspace" 

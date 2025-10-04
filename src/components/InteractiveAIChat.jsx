@@ -279,88 +279,66 @@ const InteractiveAIChat = ({ aiAnalysis }) => {
   ]
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-b from-slate-800 to-slate-900">
-      {/* Header */}
-      <div className="p-4 border-b border-slate-700 bg-slate-800/50 backdrop-blur-sm">
+    <div className="h-full flex flex-col bg-slate-900">
+      {/* Simplified Header */}
+      <div className="p-3 border-b border-slate-700 bg-slate-800">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center">
-              <Brain className="w-5 h-5 text-white" />
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+              <Brain className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white">AI Assistant</h3>
-              <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${aiAnalysis ? 'bg-green-400' : 'bg-yellow-400'} animate-pulse`}></div>
-                <span className="text-sm text-slate-400">
-                  {aiAnalysis ? 'Codebase Analyzed' : 'Analyzing...'}
+              <h3 className="text-sm font-semibold text-white">AI Assistant</h3>
+              <div className="flex items-center space-x-1">
+                <div className={`w-1.5 h-1.5 rounded-full ${aiAnalysis ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                <span className="text-xs text-slate-400">
+                  {aiAnalysis ? 'Ready' : 'Analyzing...'}
                 </span>
               </div>
             </div>
           </div>
-          
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setShowQuickActions(!showQuickActions)}
-              className={`p-2 rounded-lg transition-all ${
-                showQuickActions 
-                  ? 'bg-purple-600 text-white' 
-                  : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
-              }`}
-            >
-              <Wand2 className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setShowSuggestions(!showSuggestions)}
-              className="p-2 bg-slate-700 text-slate-400 hover:bg-slate-600 rounded-lg transition-colors"
-            >
-              <Lightbulb className="w-4 h-4" />
-            </button>
-          </div>
+          <button
+            onClick={() => setShowQuickActions(!showQuickActions)}
+            className={`p-1.5 rounded text-xs ${
+              showQuickActions 
+                ? 'bg-purple-600 text-white' 
+                : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+            }`}
+          >
+            <Wand2 className="w-3 h-3" />
+          </button>
         </div>
       </div>
 
-      {/* Quick Actions Panel */}
+      {/* Simplified Quick Actions */}
       {showQuickActions && (
-        <div className="p-4 border-b border-slate-700 bg-slate-800/30">
-          <div className="grid grid-cols-4 gap-3">
-            {quickActions.map((action) => (
+        <div className="p-2 border-b border-slate-700 bg-slate-800/30">
+          <div className="grid grid-cols-4 gap-2">
+            {quickActions.slice(0, 4).map((action) => (
               <button
                 key={action.id}
                 onClick={() => handleQuickAction(action.id)}
-                className={`flex flex-col items-center space-y-2 p-3 rounded-xl transition-all hover:scale-105 ${action.bg} hover:bg-opacity-30`}
+                className={`flex flex-col items-center space-y-1 p-2 rounded-lg transition-all ${action.bg} hover:bg-opacity-30`}
               >
-                <action.icon className={`w-5 h-5 ${action.color}`} />
-                <span className="text-xs font-medium text-slate-300">{action.label}</span>
+                <action.icon className={`w-4 h-4 ${action.color}`} />
+                <span className="text-xs text-slate-300">{action.label}</span>
               </button>
             ))}
           </div>
         </div>
       )}
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      {/* Simplified Messages */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
         {aiMessages.length === 0 && (
-          <div className="text-center py-12">
-            <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-3xl flex items-center justify-center mx-auto mb-6">
-              <Sparkles className="w-10 h-10 text-white" />
+          <div className="text-center py-6">
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mx-auto mb-3">
+              <Sparkles className="w-6 h-6 text-white" />
             </div>
-            <h3 className="text-xl font-semibold text-white mb-3">Welcome to AI Assistant!</h3>
-            <p className="text-slate-400 mb-6 max-w-md mx-auto">
-              I've analyzed your codebase and I'm ready to help you code better. 
+            <h3 className="text-lg font-semibold text-white mb-2">AI Assistant Ready</h3>
+            <p className="text-slate-400 text-sm">
               Ask me anything about your project!
             </p>
-            <div className="flex flex-wrap justify-center gap-3">
-              {quickActions.slice(0, 4).map((action) => (
-                <button
-                  key={action.id}
-                  onClick={() => handleQuickAction(action.id)}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:scale-105 ${action.bg} ${action.color}`}
-                >
-                  <action.icon className="w-4 h-4" />
-                  <span>{action.label}</span>
-                </button>
-              ))}
-            </div>
           </div>
         )}
 
@@ -510,60 +488,35 @@ const InteractiveAIChat = ({ aiAnalysis }) => {
           </div>
         )}
 
-        <div className="flex items-end space-x-3">
-          <div className="flex-1 relative">
-            <textarea
+        {/* Simplified Input */}
+        <div className="flex items-center space-x-2 p-3 bg-slate-800 border-t border-slate-700">
+          <div className="flex-1">
+            <input
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
+                if (e.key === 'Enter') {
                   e.preventDefault()
                   handleSend()
                 }
               }}
-              placeholder="Ask me anything about your code..."
-              className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-xl text-white placeholder-slate-400 resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              rows={1}
-              style={{ minHeight: '48px', maxHeight: '120px' }}
+              placeholder="Ask me anything..."
+              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-purple-500"
             />
           </div>
           
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={handleVoiceInput}
-              className={`p-2 rounded-lg transition-colors ${
-                isListening 
-                  ? 'bg-red-600 text-white animate-pulse' 
-                  : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
-              }`}
-            >
-              {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-            </button>
-            
-            <button
-              onClick={() => setIsMuted(!isMuted)}
-              className={`p-2 rounded-lg transition-colors ${
-                isMuted 
-                  ? 'bg-red-600 text-white' 
-                  : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
-              }`}
-            >
-              {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            </button>
-            
-            <button
-              onClick={handleSend}
-              disabled={!input.trim() || isAIProcessing}
-              className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            >
-              {isAIProcessing ? (
-                <Loader className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4" />
-              )}
-            </button>
-          </div>
+          <button
+            onClick={handleSend}
+            disabled={!input.trim() || isAIProcessing}
+            className="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {isAIProcessing ? (
+              <Loader className="w-4 h-4 animate-spin" />
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
+          </button>
         </div>
       </div>
     </div>

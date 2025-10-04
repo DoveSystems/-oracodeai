@@ -517,6 +517,58 @@ const Preview = () => {
               </p>
             </div>
           </div>
+        ) : status === 'running' && !previewUrl ? (
+          <div className="h-full flex items-center justify-center text-gray-500 bg-gradient-to-br from-gray-50 to-gray-100">
+            <div className="text-center max-w-lg p-8">
+              <div className="mb-6">
+                <Code className="w-20 h-20 mx-auto mb-4 text-blue-500" />
+                <h3 className="text-2xl font-bold text-gray-700 mb-2">Project Preview</h3>
+                <p className="text-gray-600 mb-4">
+                  Your project is ready! Here's what we found in your project:
+                </p>
+              </div>
+
+              <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6 text-left">
+                <h4 className="font-semibold text-gray-700 mb-3 flex items-center">
+                  <Sparkles className="w-4 h-4 mr-2 text-purple-500" />
+                  Project Structure:
+                </h4>
+                <div className="text-sm text-gray-600 space-y-1">
+                  <div className="flex items-center">
+                    <span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
+                    package.json - Project configuration
+                  </div>
+                  <div className="flex items-center">
+                    <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
+                    src/ - Source code directory
+                  </div>
+                  <div className="flex items-center">
+                    <span className="w-2 h-2 bg-purple-500 rounded-full mr-3"></span>
+                    public/ - Static assets
+                  </div>
+                  <div className="flex items-center">
+                    <span className="w-2 h-2 bg-orange-500 rounded-full mr-3"></span>
+                    Configuration files ready
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={handleRunDevServer}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  Start Dev Server
+                </button>
+                <button
+                  onClick={handleOpenTerminal}
+                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  Open Terminal
+                </button>
+              </div>
+            </div>
+          </div>
         ) : status === 'readonly' ? (
           <div className="h-full flex items-center justify-center text-gray-500 bg-gradient-to-br from-gray-50 to-gray-100">
             <div className="text-center max-w-lg p-8">
