@@ -21,7 +21,7 @@ import Preview from '../components/Preview'
 import SuperIntelligentAI from '../components/SuperIntelligentAI'
 import LogsPanel from '../components/LogsPanel'
 import StatusBar from '../components/StatusBar'
-// Removed localhostServer import - no longer needed
+import { createTerminalWindow } from '../utils/terminal'
 
 const Workspace = () => {
   const navigate = useNavigate()
