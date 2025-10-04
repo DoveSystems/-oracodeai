@@ -21,7 +21,7 @@ import Preview from '../components/Preview'
 import SuperIntelligentAI from '../components/SuperIntelligentAI'
 import LogsPanel from '../components/LogsPanel'
 import StatusBar from '../components/StatusBar'
-import { startLocalhostServer, stopLocalhostServer } from '../utils/localhostServer'
+// Removed localhostServer import - no longer needed
 
 const Workspace = () => {
   const navigate = useNavigate()
@@ -63,9 +63,9 @@ const Workspace = () => {
       addLog({ type: 'success', message: '✅ AI analysis complete! Your codebase is ready.' })
     }, 2000)
 
-    // Cleanup function to stop server when component unmounts
+    // Cleanup function - no longer needed
     return () => {
-      stopLocalhostServer()
+      // Cleanup handled by ProfessionalPreview component
     }
   }, [files, navigate, addLog])
 
